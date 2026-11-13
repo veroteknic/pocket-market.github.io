@@ -45,6 +45,10 @@ main { max-width: 920px; margin: auto; }
   color: #d7e8d9;
   box-shadow: 4px 4px 0 rgba(24, 32, 29, 0.18);
 }
+#dev-console strong { display: block; }
+.dev-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+.dev-grid span { color: #a9b8aa; font-size: 11px; }
+.dev-grid strong { color: #d7e8d9; font: 14px Consolas, monospace; }
 #dev-console pre { margin: 8px 0 0; white-space: pre-wrap; font: 12px/1.4 Consolas, monospace; }
 h1 {
   margin: 0;

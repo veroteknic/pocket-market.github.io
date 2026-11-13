@@ -21,8 +21,6 @@
   </div>
   <main>
     <h1>Pocket Market</h1>
-    <p>Fake money only. Build the biggest portfolio before summer break.</p>
-
     <section class="status" aria-live="polite">
       <strong>Day <span id="day">1</span> / 365</strong>
       <span>Cash: $<span id="cash">10,000.00</span></span>
@@ -57,14 +55,23 @@
     </section>
 
     <section>
-      <h2>Local leaderboard</h2>
-      <ol id="leaderboard"><li>No completed school years yet.</li></ol>
-      <small>This leaderboard is saved only in this browser.</small>
+      <h2>Daily leaderboard</h2>
+      <ol id="leaderboard"><li>No scores yet today.</li></ol>
     </section>
   </main>
   <aside id="dev-console" hidden>
-    <strong>DEV CONSOLE</strong>
-    <pre id="dev-output">Waiting for market data…</pre>
+    <strong>DEV DASHBOARD</strong>
+    <div class="dev-grid">
+      <span>Connection<strong id="dev-connection">Online</strong></span>
+      <span>Day<strong id="dev-day">—</strong></span>
+      <span>Tick<strong id="dev-tick">—</strong></span>
+      <span>Sentiment<strong id="dev-sentiment">—</strong></span>
+      <span>Event<strong id="dev-event">None</strong></span>
+    </div>
+    <details>
+      <summary>Raw market state</summary>
+      <pre id="dev-output">Waiting for market data…</pre>
+    </details>
   </aside>
   <script src="game.js"></script>
 </body>

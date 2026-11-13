@@ -12,6 +12,10 @@ const isDeveloper = () => getPlayerName().toLowerCase() === "veroteknik";
 function updateDevConsole(data) {
   if (!isDeveloper()) return;
   $("dev-console").hidden = false;
+  $("dev-day").textContent = `${data.day ?? "—"} / 365`;
+  $("dev-tick").textContent = data.tick ?? "—";
+  $("dev-sentiment").textContent = data.sentiment == null ? "—" : Math.round(data.sentiment);
+  $("dev-event").textContent = data.event?.headline || "None";
   $("dev-output").textContent = JSON.stringify({
     connected: true,
     day: data.day,
