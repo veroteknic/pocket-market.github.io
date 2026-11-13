@@ -33,7 +33,8 @@ main { max-width: 1040px; margin: auto; }
   display: grid;
   place-items: start end;
   padding: 34px;
-  background: rgba(244, 241, 233, 0.08);
+  background: rgba(244, 241, 233, 0.12);
+  backdrop-filter: blur(4px);
 }
 .identity-card { width: min(390px, 100%); border: 1px solid var(--line); border-top: 3px solid var(--ink); padding: 22px 24px 18px; background: rgba(251, 250, 246, 0.98); box-shadow: 8px 8px 0 rgba(24, 32, 29, 0.08); }
 .identity-card h1 { margin-bottom: 8px; }
@@ -147,7 +148,7 @@ small { color: var(--muted); }
   th, td { padding: 9px 5px; font-size: 14px; }
   .status { gap: 5px; }
   .status span, .status strong { margin-right: 12px; }
-  .identity-gate { place-items: center; padding: 18px; background: rgba(244, 241, 233, 0.12); }
+  .identity-gate { place-items: center; padding: 18px; background: rgba(244, 241, 233, 0.14); }
   .identity-card form { flex-direction: column; }
   button, select, input { min-height: 42px; }
   .trade button { min-width: 62px; }
