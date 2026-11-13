@@ -33,8 +33,8 @@ main { max-width: 1040px; margin: auto; }
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(244, 241, 233, 0.76);
-  backdrop-filter: blur(7px);
+  background: rgba(244, 241, 233, 0.25);
+  backdrop-filter: blur(2px);
 }
 .identity-card { width: min(440px, 100%); border: 1px solid var(--line); border-top: 3px solid var(--ink); padding: 22px 24px 18px; background: rgba(251, 250, 246, 0.96); box-shadow: 8px 8px 0 rgba(24, 32, 29, 0.08); }
 .identity-card h1 { margin-bottom: 8px; }
