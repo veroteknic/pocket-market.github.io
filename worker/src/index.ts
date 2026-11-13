@@ -289,21 +289,21 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
     if (url.pathname === "/api/market") {
-      const market = env.MARKET.getByName("global-school-year-market-v10");
+      const market = env.MARKET.getByName("global-school-year-market-v11");
       const state = await market.getMarket();
       return Response.json({ ...state, day: currentDayOfYear() }, { headers: cors });
     }
 
     if (url.pathname === "/api/player" && request.method === "GET") {
       const playerId = url.searchParams.get("playerId") || "";
-      const market = env.MARKET.getByName("global-school-year-market-v10");
+      const market = env.MARKET.getByName("global-school-year-market-v11");
       return Response.json(await market.getPlayer(playerId), { headers: cors });
     }
 
     if (url.pathname === "/api/session" && request.method === "POST") {
       try {
         const body = await request.json() as { playerId?: string; name?: string };
-        const market = env.MARKET.getByName("global-school-year-market-v10");
+        const market = env.MARKET.getByName("global-school-year-market-v11");
         const player = await market.registerPlayer(body.playerId || "", body.name || "");
         return Response.json(player, { headers: cors });
       } catch (error) {
@@ -312,7 +312,7 @@ export default {
     }
 
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
-      const market = env.MARKET.getByName("global-school-year-market-v10");
+      const market = env.MARKET.getByName("global-school-year-market-v11");
       const state = await market.getMarket();
       return Response.json(await market.getLeaderboard(state), { headers: cors });
     }
@@ -320,7 +320,7 @@ export default {
     if (url.pathname === "/api/trade" && request.method === "POST") {
       try {
         const body = await request.json() as { playerId?: string; playerName?: string; ticker?: string; action?: string; quantity?: number };
-        const market = env.MARKET.getByName("global-school-year-market-v10");
+        const market = env.MARKET.getByName("global-school-year-market-v11");
         const result = await market.trade(body.playerId || "", body.playerName || "Anonymous", body.ticker || "", body.action || "", body.quantity || 0);
         return Response.json(result, { headers: cors });
       } catch (error) {
@@ -332,7 +332,7 @@ export default {
       if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
         return new Response("Expected a WebSocket connection.", { status: 426 });
       }
-      const market = env.MARKET.getByName("global-school-year-market-v10");
+      const market = env.MARKET.getByName("global-school-year-market-v11");
       return market.fetch(request);
     }
 
