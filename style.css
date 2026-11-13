@@ -95,6 +95,17 @@ input { width: 70px; }
 .trade { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
 .up { color: var(--green); } .down { color: var(--red); }
 #message { min-height: 24px; margin: 8px 0; color: var(--muted); font-weight: 600; }
+.event-alert {
+  display: block;
+  padding: 12px 14px;
+  border: 2px solid var(--ink);
+  color: var(--ink) !important;
+  font-size: 20px;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px;
+}
+.event-alert.boom { border-color: var(--green); color: var(--green) !important; }
+.event-alert.crash { border-color: var(--red); color: var(--red) !important; }
 section { margin-top: 20px; }
 .chart-panel { border-top: 2px solid var(--ink); padding-top: 12px; }
 #price-chart { display: block; width: 100%; height: auto; margin-top: 12px; background: #faf9f4; border: 1px solid var(--line); }

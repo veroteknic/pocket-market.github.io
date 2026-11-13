@@ -162,7 +162,12 @@ function connectToMarket() {
       const mood = update.sentiment > 35 ? "Hype" : update.sentiment < -35 ? "Panic" : "Neutral";
       $("sentiment").textContent = `${mood} (${Math.round(update.sentiment)})`;
     }
-    if (update.event) $("message").textContent = update.event.headline;
+    if (update.event) {
+      $("message").textContent = update.event.headline;
+      $("message").classList.add("event-alert", update.event.kind);
+    } else {
+      $("message").classList.remove("event-alert", "boom", "crash");
+    }
 
     state.companies.forEach(company => {
       const nextPrice = update.prices[company.ticker];
