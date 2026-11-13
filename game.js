@@ -35,6 +35,7 @@ const companies = [
 
 let state;
 let marketHistory = {};
+let pendingTrade = null;
 const $ = (id) => document.getElementById(id);
 const money = (value) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -57,6 +58,26 @@ function portfolioValue() {
   return state.companies.reduce((sum, company) => sum + company.price * company.shares, 0);
 }
 
+function priceChange(ticker, currentPrice) {
+  const points = marketHistory[ticker] || [];
+  if (points.length < 2) return null;
+  const previousPrice = points[points.length - 2]?.price;
+  if (!Number.isFinite(previousPrice)) return null;
+  const amount = currentPrice - previousPrice;
+  return {
+    amount,
+    percent: previousPrice ? (amount / previousPrice) * 100 : 0,
+  };
+}
+
+function changeMarkup(change) {
+  if (!change) return '<span class="change neutral">—</span>';
+  const direction = change.amount > 0 ? "up" : change.amount < 0 ? "down" : "neutral";
+  const amountSign = change.amount > 0 ? "+$" : change.amount < 0 ? "-$" : "$";
+  const percentSign = change.percent > 0 ? "+" : "";
+  return `<span class="change ${direction}">${amountSign}${money(Math.abs(change.amount))} (${percentSign}${change.percent.toFixed(2)}%)</span>`;
+}
+
 function render() {
   $("day").textContent = state.day;
   $("cash").textContent = money(state.cash);
@@ -66,11 +87,13 @@ function render() {
     <tr>
       <td><strong>${company.name}</strong> (${company.ticker})</td>
       <td>$${money(company.price)}</td>
+      <td>${changeMarkup(priceChange(company.ticker, company.price))}</td>
       <td>${company.shares}</td>
+      <td>$${money(company.price * company.shares)}</td>
       <td class="trade">
         <input id="amount-${index}" type="number" min="1" value="1" aria-label="Shares of ${company.name}">
-        <button data-action="buy" data-index="${index}">Buy</button>
-        <button data-action="sell" data-index="${index}">Sell</button>
+        <button data-action="buy" data-index="${index}" ${pendingTrade ? "disabled" : ""}>Buy</button>
+        <button data-action="sell" data-index="${index}" ${pendingTrade ? "disabled" : ""}>Sell</button>
       </td>
     </tr>`).join("");
   drawChart();
@@ -114,9 +137,14 @@ function drawChart() {
 function setMessage(text) { $("message").textContent = text; }
 
 async function trade(index, action) {
+  if (pendingTrade) return;
   const company = state.companies[index];
   const amount = Math.floor(Number($(`amount-${index}`).value));
   if (!Number.isFinite(amount) || amount < 1) return setMessage("Enter a whole number of shares.");
+
+  pendingTrade = { index, action };
+  setMessage(`${action === "buy" ? "Buying" : "Selling"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name}…`);
+  render();
 
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/trade`, {
@@ -129,9 +157,11 @@ async function trade(index, action) {
     state.cash = result.player.cash;
     state.companies.forEach(item => { item.shares = result.player.holdings[item.ticker] || 0; });
     setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}.`);
-    render();
   } catch {
     setMessage("Could not reach the live market server.");
+  } finally {
+    pendingTrade = null;
+    render();
   }
 }
 

@@ -97,7 +97,10 @@ button:hover { background: var(--ink); color: var(--paper); }
 input { width: 70px; }
 #player-name { width: 150px; margin-left: 6px; }
 .trade { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.trade button:disabled { cursor: wait; opacity: 0.55; }
 .up { color: var(--green); } .down { color: var(--red); }
+.change { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.change.neutral { color: var(--muted); }
 #message { min-height: 24px; margin: 8px 0; color: var(--muted); font-weight: 600; }
 .event-alert {
   display: block;
