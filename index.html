@@ -20,7 +20,14 @@
     </div>
   </div>
   <main>
-    <h1>Pocket Market</h1>
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">POCKET MARKET <span class="eyebrow-dot"></span> SCHOOL YEAR EDITION</p>
+        <h1>Pocket Market</h1>
+        <p class="subtitle">A shared, fast-moving market for curious traders.</p>
+      </div>
+      <div class="live-badge"><span class="live-dot"></span> Live market</div>
+    </header>
     <section class="status" aria-live="polite">
       <strong>Day <span id="day">1</span> / 365</strong>
       <span>Cash: $<span id="cash">10,000.00</span></span>
@@ -32,33 +39,51 @@
 
     <p id="message">Start the school year, then trade while the days pass automatically.</p>
 
-    <table>
+    <section class="market-section">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">THE BOARD</p>
+          <h2>Today’s market</h2>
+        </div>
+        <span class="section-note">Prices move every 15 seconds</span>
+      </div>
+      <table class="market-table">
       <thead>
         <tr><th>Company</th><th>Price</th><th>Change</th><th>Owned</th><th>Value</th><th>P/L</th><th>Trade</th></tr>
       </thead>
       <tbody id="market"></tbody>
-    </table>
+      </table>
+    </section>
 
     <section class="chart-panel">
-      <label for="chart-stock">Price history:</label>
-      <select id="chart-stock">
-        <option value="MTA">Moon Taco (MTA)</option>
-        <option value="PXP">PixelPets (PXP)</option>
-        <option value="RMP">RoboMop (RMP)</option>
-        <option value="CLD">Cloudy Soda (CLD)</option>
-      </select>
+      <div class="section-heading compact-heading">
+        <div>
+          <p class="section-kicker">THE TAPE</p>
+          <h2>Price history</h2>
+        </div>
+        <label for="chart-stock">View <select id="chart-stock">
+          <option value="MTA">Moon Taco (MTA)</option>
+          <option value="PXP">PixelPets (PXP)</option>
+          <option value="RMP">RoboMop (RMP)</option>
+          <option value="CLD">Cloudy Soda (CLD)</option>
+        </select></label>
+      </div>
       <canvas id="price-chart" width="860" height="260" aria-label="Selected stock price history"></canvas>
     </section>
 
-    <section>
-      <h2>News</h2>
-      <ul id="news"><li>The market is open.</li></ul>
-    </section>
+    <div class="lower-grid">
+      <section>
+        <p class="section-kicker">SIGNALS</p>
+        <h2>News</h2>
+        <ul id="news"><li>The market is open.</li></ul>
+      </section>
 
-    <section>
-      <h2>Daily leaderboard</h2>
-      <ol id="leaderboard"><li>No scores yet today.</li></ol>
-    </section>
+      <section>
+        <p class="section-kicker">THE RACE</p>
+        <h2>Daily leaderboard</h2>
+        <ol id="leaderboard"><li>No scores yet today.</li></ol>
+      </section>
+    </div>
   </main>
   <aside id="dev-console" hidden>
     <strong>DEV DASHBOARD</strong>
