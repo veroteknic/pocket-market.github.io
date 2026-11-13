@@ -124,31 +124,102 @@ function drawChart() {
   const ctx = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
+  const left = 62;
+  const right = 18;
+  const top = 24;
+  const bottom = 38;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+
   ctx.clearRect(0, 0, width, height);
-  ctx.strokeStyle = "#dddddd";
+  ctx.fillStyle = "#fbfaf6";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.font = "11px Segoe UI, Arial, sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.strokeStyle = "#ded9ce";
+  ctx.fillStyle = "#7b8179";
   ctx.lineWidth = 1;
+  for (let index = 0; index <= 4; index += 1) {
+    const y = top + (index / 4) * plotHeight;
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(width - right, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#9d9a91";
   ctx.beginPath();
-  ctx.moveTo(42, 12); ctx.lineTo(42, height - 28); ctx.lineTo(width - 12, height - 28);
+  ctx.moveTo(left, top);
+  ctx.lineTo(left, height - bottom);
+  ctx.lineTo(width - right, height - bottom);
   ctx.stroke();
-  if (points.length < 2) return;
+
+  if (points.length < 2) {
+    ctx.fillStyle = "#7b8179";
+    ctx.textAlign = "center";
+    ctx.fillText("Waiting for live price history…", left + plotWidth / 2, top + plotHeight / 2);
+    ctx.textAlign = "left";
+    return;
+  }
 
   const values = points.map(point => point.price);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const rawRange = rawMax - rawMin || Math.max(rawMax * 0.08, 1);
+  const min = Math.max(0, rawMin - rawRange * 0.12);
+  const max = rawMax + rawRange * 0.12;
   const range = max - min || 1;
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 2;
+  const xFor = index => left + (index / (points.length - 1)) * plotWidth;
+  const yFor = price => top + (1 - (price - min) / range) * plotHeight;
+
+  ctx.fillStyle = "#7b8179";
+  ctx.textAlign = "right";
+  for (let index = 0; index <= 4; index += 1) {
+    const value = max - (index / 4) * range;
+    const y = top + (index / 4) * plotHeight;
+    ctx.fillText(`$${money(value)}`, left - 10, y);
+  }
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("Older", left, height - 12);
+  ctx.textAlign = "right";
+  ctx.fillText("Latest", width - right, height - 12);
+
+  const last = points[points.length - 1];
+  const first = points[0];
+  const trendColor = last.price >= first.price ? "#21634b" : "#a13e37";
+  const line = points.map((point, index) => ({ x: xFor(index), y: yFor(point.price) }));
+
   ctx.beginPath();
-  points.forEach((point, index) => {
-    const x = 42 + (index / (points.length - 1)) * (width - 54);
-    const y = 12 + (1 - (point.price - min) / range) * (height - 40);
-    if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  ctx.moveTo(line[0].x, height - bottom);
+  line.forEach(point => ctx.lineTo(point.x, point.y));
+  ctx.lineTo(line[line.length - 1].x, height - bottom);
+  ctx.closePath();
+  const area = ctx.createLinearGradient(0, top, 0, height - bottom);
+  area.addColorStop(0, last.price >= first.price ? "rgba(33, 99, 75, 0.18)" : "rgba(161, 62, 55, 0.16)");
+  area.addColorStop(1, "rgba(251, 250, 246, 0)");
+  ctx.fillStyle = area;
+  ctx.fill();
+
+  ctx.beginPath();
+  line.forEach((point, index) => {
+    if (index === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y);
   });
+  ctx.strokeStyle = trendColor;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.stroke();
-  ctx.fillStyle = "#111111";
-  ctx.font = "12px Arial";
-  ctx.fillText(`$${money(max)}`, 4, 18);
-  ctx.fillText(`$${money(min)}`, 4, height - 30);
+
+  const endpoint = line[line.length - 1];
+  ctx.beginPath();
+  ctx.arc(endpoint.x, endpoint.y, 5, 0, Math.PI * 2);
+  ctx.fillStyle = "#fbfaf6";
+  ctx.fill();
+  ctx.strokeStyle = trendColor;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.textAlign = "left";
 }
 
 function setMessage(text) { $("message").textContent = text; }
