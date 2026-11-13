@@ -33,9 +33,10 @@ main { max-width: 1040px; margin: auto; }
   display: grid;
   place-items: center;
   padding: 20px;
-  background: var(--paper);
+  background: rgba(244, 241, 233, 0.76);
+  backdrop-filter: blur(7px);
 }
-.identity-card { width: min(440px, 100%); border-top: 3px solid var(--ink); padding-top: 18px; }
+.identity-card { width: min(440px, 100%); border: 1px solid var(--line); border-top: 3px solid var(--ink); padding: 22px 24px 18px; background: rgba(251, 250, 246, 0.96); box-shadow: 8px 8px 0 rgba(24, 32, 29, 0.08); }
 .identity-card h1 { margin-bottom: 8px; }
 .identity-card form { display: flex; gap: 8px; margin-top: 22px; }
 .identity-card input { flex: 1; width: auto; }
