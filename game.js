@@ -36,6 +36,7 @@ const companies = [
 let state;
 let marketHistory = {};
 let pendingTrade = null;
+let playerStats = { costBasis: {}, realizedProfit: 0 };
 const $ = (id) => document.getElementById(id);
 const money = (value) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -56,6 +57,20 @@ function getCurrentDayOfYear() {
 
 function portfolioValue() {
   return state.companies.reduce((sum, company) => sum + company.price * company.shares, 0);
+}
+
+function unrealizedProfit(company) {
+  return company.price * company.shares - (playerStats.costBasis[company.ticker] || 0);
+}
+
+function totalProfitLoss() {
+  return playerStats.realizedProfit + state.companies.reduce((sum, company) => sum + unrealizedProfit(company), 0);
+}
+
+function profitMarkup(value) {
+  const direction = value > 0 ? "up" : value < 0 ? "down" : "neutral";
+  const sign = value > 0 ? "+$" : value < 0 ? "-$" : "$";
+  return `<span class="change ${direction}">${sign}${money(Math.abs(value))}</span>`;
 }
 
 function priceChange(ticker, currentPrice) {
@@ -83,6 +98,7 @@ function render() {
   $("cash").textContent = money(state.cash);
   $("portfolio").textContent = money(portfolioValue());
   $("total").textContent = money(state.cash + portfolioValue());
+  $("profit-loss").innerHTML = profitMarkup(totalProfitLoss());
   $("market").innerHTML = state.companies.map((company, index) => `
     <tr>
       <td><strong>${company.name}</strong> (${company.ticker})</td>
@@ -90,6 +106,7 @@ function render() {
       <td>${changeMarkup(priceChange(company.ticker, company.price))}</td>
       <td>${company.shares}</td>
       <td>$${money(company.price * company.shares)}</td>
+      <td>${profitMarkup(unrealizedProfit(company))}</td>
       <td class="trade">
         <input id="amount-${index}" type="number" min="1" value="1" aria-label="Shares of ${company.name}">
         <button data-action="buy" data-index="${index}" ${pendingTrade ? "disabled" : ""}>Buy</button>
@@ -155,6 +172,8 @@ async function trade(index, action) {
     const result = await response.json();
     if (!response.ok) return setMessage(result.error || "Trade rejected.");
     state.cash = result.player.cash;
+    playerStats.costBasis = result.player.costBasis || {};
+    playerStats.realizedProfit = result.player.realizedProfit || 0;
     state.companies.forEach(item => { item.shares = result.player.holdings[item.ticker] || 0; });
     setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}.`);
   } catch {
@@ -170,6 +189,8 @@ async function loadPlayer() {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/player?playerId=${encodeURIComponent(playerId)}`);
     const player = await response.json();
     state.cash = player.cash;
+    playerStats.costBasis = player.costBasis || {};
+    playerStats.realizedProfit = player.realizedProfit || 0;
     state.companies.forEach(company => { company.shares = player.holdings[company.ticker] || 0; });
     render();
   } catch {

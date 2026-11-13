@@ -14,12 +14,19 @@ const volatility = {
   CLD: 0.18,
 };
 
-const TICK_MS = 3000;
+// Keep the shared market lively without exhausting Durable Object free-tier writes.
+const TICK_MS = 15000;
 const MAX_DAYS = 365;
 type Prices = typeof startingPrices;
 type HistoryPoint = { time: number; price: number };
 type History = { [K in keyof Prices]: HistoryPoint[] };
-type PlayerState = { name: string; cash: number; holdings: Partial<Record<keyof Prices, number>> };
+type PlayerState = {
+  name: string;
+  cash: number;
+  holdings: Partial<Record<keyof Prices, number>>;
+  costBasis: Partial<Record<keyof Prices, number>>;
+  realizedProfit: number;
+};
 type LeaderEntry = { name: string; score: number; rank: number; rankChange: number };
 type MarketEvent = { headline: string; kind: "boom" | "crash"; effect: number; expiresAt: number };
 type MarketState = { day: number; tick: number; updatedAt: number; prices: Prices; history: History; orderFlow: Partial<Record<keyof Prices, number>>; sentiment: number; event: MarketEvent | null };
@@ -149,14 +156,24 @@ export class Market extends DurableObject {
       event,
     };
     await this.ctx.storage.put("market", nextMarket);
-    await this.updateLeaderboard(nextMarket);
     this.broadcast(nextMarket);
     await this.ctx.storage.setAlarm(Date.now() + TICK_MS);
   }
 
   async getPlayer(playerId: string): Promise<PlayerState> {
     const player = await this.ctx.storage.get<PlayerState>(`player:${playerId}`);
-    return player || { name: "Anonymous", cash: 10000, holdings: {} };
+    if (!player) return { name: "Anonymous", cash: 10000, holdings: {}, costBasis: {}, realizedProfit: 0 };
+
+    // Migrate players created before cost basis tracking was introduced.
+    const migrated = {
+      ...player,
+      costBasis: player.costBasis || {},
+      realizedProfit: Number.isFinite(player.realizedProfit) ? player.realizedProfit : 0,
+    };
+    if (!player.costBasis || !Number.isFinite(player.realizedProfit)) {
+      await this.ctx.storage.put(`player:${playerId}`, migrated);
+    }
+    return migrated;
   }
 
   async registerPlayer(playerId: string, name: string): Promise<PlayerState> {
@@ -178,27 +195,21 @@ export class Market extends DurableObject {
     return player;
   }
 
-  async getLeaderboard(day: number): Promise<LeaderEntry[]> {
-    const entries = await this.ctx.storage.list<LeaderEntry>({ prefix: `leaderboard:${day}:` });
-    return [...entries.values()].sort((a, b) => b.score - a.score).slice(0, 10);
-  }
-
-  private async updateLeaderboard(market: MarketState) {
+  async getLeaderboard(market: MarketState): Promise<LeaderEntry[]> {
     const players = await this.ctx.storage.list<PlayerState>({ prefix: "player:" });
-    const entries: Array<{ playerId: string; name: string; score: number; previousRank: number }> = [];
+    const entries: Array<{ name: string; score: number }> = [];
     for (const [key, player] of players) {
       const score = Math.round(player.cash + Object.entries(player.holdings).reduce((total, [ticker, shares]) => total + (market.prices[ticker as keyof Prices] * (shares || 0)), 0));
-      const playerId = key.slice("player:".length);
-      const previous = await this.ctx.storage.get<LeaderEntry>(`leaderboard:${market.day}:${playerId}`);
-      entries.push({ playerId, name: player.name || "Anonymous", score, previousRank: previous?.rank || 0 });
+      entries.push({ name: player.name || "Anonymous", score });
     }
     entries.sort((a, b) => b.score - a.score);
-    for (const [index, entry] of entries.entries()) {
-      await this.ctx.storage.put(`leaderboard:${market.day}:${entry.playerId}`, {
-        name: entry.name, score: entry.score, rank: index + 1,
-        rankChange: entry.previousRank ? entry.previousRank - (index + 1) : 0,
-      });
-    }
+    return entries.slice(0, 10).map((entry, index) => ({
+      name: entry.name,
+      score: entry.score,
+      rank: index + 1,
+      // Rank movement is intentionally omitted from storage-heavy updates.
+      rankChange: 0,
+    }));
   }
 
   async trade(playerId: string, playerName: string, ticker: string, action: string, quantity: number) {
@@ -211,22 +222,27 @@ export class Market extends DurableObject {
     const player = await this.getPlayer(playerId);
     if (typeof playerName === "string" && playerName.trim()) player.name = playerName.trim().slice(0, 16);
     const owned = player.holdings[symbol] || 0;
+    const costBasis = player.costBasis[symbol] || 0;
     const total = market.prices[symbol] * quantity;
 
     if (action === "buy") {
       if (player.cash < total) throw new Error("Not enough cash");
       player.cash -= total;
       player.holdings[symbol] = owned + quantity;
+      player.costBasis[symbol] = roundMoney(costBasis + total);
     } else {
       if (owned < quantity) throw new Error("Not enough shares");
       player.cash += total;
       player.holdings[symbol] = owned - quantity;
+      const averageCost = owned > 0 ? costBasis / owned : 0;
+      player.costBasis[symbol] = roundMoney(Math.max(0, costBasis - averageCost * quantity));
+      player.realizedProfit = roundMoney(player.realizedProfit + total - averageCost * quantity);
     }
 
     const flow = (market.orderFlow?.[symbol] || 0) + (action === "buy" ? quantity : -quantity);
+    const nextMarket = { ...market, orderFlow: { ...market.orderFlow, [symbol]: Math.max(-100, Math.min(100, flow)) } };
     await this.ctx.storage.put(`player:${playerId}`, player);
-    await this.ctx.storage.put("market", { ...market, orderFlow: { ...market.orderFlow, [symbol]: Math.max(-100, Math.min(100, flow)) } });
-    await this.updateLeaderboard(market);
+    await this.ctx.storage.put("market", nextMarket);
     return { player, price: market.prices[symbol], ticker: symbol, action, quantity };
   }
 
@@ -240,7 +256,11 @@ export class Market extends DurableObject {
       }
     }
   }
-} 
+}
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
 
 function randomMarketEvent(now: number): MarketEvent {
   const boom = Math.random() > 0.5;
@@ -283,7 +303,7 @@ export default {
     if (url.pathname === "/api/session" && request.method === "POST") {
       try {
         const body = await request.json() as { playerId?: string; name?: string };
-        const market = env.MARKET.getByName("global-school-year-market-v9");
+        const market = env.MARKET.getByName("global-school-year-market-v10");
         const player = await market.registerPlayer(body.playerId || "", body.name || "");
         return Response.json(player, { headers: cors });
       } catch (error) {
@@ -293,7 +313,8 @@ export default {
 
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
       const market = env.MARKET.getByName("global-school-year-market-v10");
-      return Response.json(await market.getLeaderboard(currentDayOfYear()), { headers: cors });
+      const state = await market.getMarket();
+      return Response.json(await market.getLeaderboard(state), { headers: cors });
     }
 
     if (url.pathname === "/api/trade" && request.method === "POST") {
@@ -317,4 +338,4 @@ export default {
 
     return new Response("Pocket Market backend is online!");
   },
-} satisfies ExportedHandler;
+} satisfies ExportedHandler<{ MARKET: DurableObjectNamespace<Market> }>;
