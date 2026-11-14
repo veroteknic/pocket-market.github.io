@@ -306,10 +306,15 @@ function connectToMarket() {
       if (typeof nextPrice === "number") company.price = nextPrice;
     });
 
-    $("news").innerHTML = [
-      `<li>Live market update received — tick ${update.tick}.</li>`,
-      "<li>Prices are controlled by the shared server.</li>"
-    ].join("");
+    const newsItems = [
+      `Live market update received — tick ${update.tick}.`,
+      "Prices are controlled by the shared server."
+    ];
+    $("news").replaceChildren(...newsItems.map(text => {
+      const item = document.createElement("li");
+      item.textContent = text;
+      return item;
+    }));
     render();
     renderLeaderboard();
   });
@@ -340,14 +345,30 @@ async function renderLeaderboard() {
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/leaderboard`, { credentials: "include" });
     const scores = await response.json();
-    $("leaderboard").innerHTML = scores.length
-      ? scores.map((entry, index) => {
-          const movement = entry.rankChange > 0 ? `▲ ${entry.rankChange}` : entry.rankChange < 0 ? `▼ ${Math.abs(entry.rankChange)}` : "—";
-          return `<li><strong>${index + 1}. ${entry.name}</strong> — $${money(entry.score)} <small>${movement}</small></li>`;
-        }).join("")
-      : "<li>No scores yet today.</li>";
+    const list = $("leaderboard");
+    list.replaceChildren();
+    if (!scores.length) {
+      const empty = document.createElement("li");
+      empty.textContent = "No scores yet today.";
+      list.append(empty);
+      return;
+    }
+    scores.forEach((entry, index) => {
+      const item = document.createElement("li");
+      const player = document.createElement("strong");
+      player.textContent = `${index + 1}. ${entry.name}`;
+      const movement = entry.rankChange > 0 ? `▲ ${entry.rankChange}` : entry.rankChange < 0 ? `▼ ${Math.abs(entry.rankChange)}` : "—";
+      const detail = document.createElement("small");
+      detail.textContent = ` — $${money(entry.score)} ${movement}`;
+      item.append(player, detail);
+      list.append(item);
+    });
   } catch {
-    $("leaderboard").innerHTML = "<li>Leaderboard unavailable.</li>";
+    const list = $("leaderboard");
+    list.replaceChildren();
+    const error = document.createElement("li");
+    error.textContent = "Leaderboard unavailable.";
+    list.append(error);
   }
 }
 
