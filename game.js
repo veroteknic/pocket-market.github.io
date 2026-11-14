@@ -295,9 +295,18 @@ function connectToMarket() {
       $("sentiment").textContent = `${mood} (${Math.round(update.sentiment)})`;
     }
     if (update.event) {
+      $("news-kind").textContent = update.event.kind === "boom" ? "MARKET BOOM" : "FLASH CRASH";
+      $("news-headline").textContent = update.event.headline;
+      $("news-detail").textContent = "React quickly. This event is affecting the live market.";
+      $("featured-news").classList.remove("boom", "crash");
+      $("featured-news").classList.add(update.event.kind);
       $("message").textContent = update.event.headline;
       $("message").classList.add("event-alert", update.event.kind);
     } else {
+      $("news-kind").textContent = "LIVE MARKET";
+      $("news-headline").textContent = "The market is open.";
+      $("news-detail").textContent = "Watch the tape for the next move.";
+      $("featured-news").classList.remove("boom", "crash");
       $("message").classList.remove("event-alert", "boom", "crash");
     }
 

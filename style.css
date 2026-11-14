@@ -141,6 +141,13 @@ section { margin-top: 20px; }
 #price-chart { display: block; width: 100%; height: auto; margin-top: 12px; background: var(--white); border: 1px solid var(--line); }
 .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px; }
 .lower-grid section { margin-top: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.7); }
+.featured-news { margin: 12px 0 14px; padding: 16px; border-left: 4px solid var(--gold); background: var(--white); }
+.featured-news.boom { border-left-color: var(--green); }
+.featured-news.crash { border-left-color: var(--red); }
+.news-kind { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: 1.5px; }
+.featured-news h3 { margin: 8px 0 4px; font: 700 19px/1.2 Georgia, serif; }
+.featured-news p { margin: 0; font-size: 13px; }
+.news-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
 ol { padding-left: 25px; }
 li { margin: 4px 0; }
 small { color: var(--muted); }
