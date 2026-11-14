@@ -63,6 +63,25 @@ function shake(intensity = "sm") {
   shakeCleanup = setTimeout(() => shell.classList.remove("shake-sm", "shake-md", "shake-lg"), 400);
 }
 
+// Every button pokes back on pointer down, plus keyboard activation (which
+// arrives as a click with detail 0).
+function tap(button) {
+  if (reducedMotion.matches) return;
+  button.classList.remove("tap");
+  void button.offsetWidth;
+  button.classList.add("tap");
+  setTimeout(() => button.classList.remove("tap"), 260);
+}
+document.addEventListener("pointerdown", event => {
+  const button = event.target instanceof Element ? event.target.closest("button") : null;
+  if (button && !button.disabled) tap(button);
+});
+document.addEventListener("click", event => {
+  if (event.detail !== 0) return;
+  const button = event.target instanceof Element ? event.target.closest("button") : null;
+  if (button && !button.disabled) tap(button);
+});
+
 function newGame() {
   state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), finished: false };
   marketHistory = {};

@@ -201,17 +201,35 @@ td { border-bottom: 1px solid var(--line); padding: 14px 10px; text-align: left;
 tbody tr:hover { background: rgba(255, 255, 255, 0.45); }
 button, input, select { font: inherit; }
 button, select, input {
-  border: 1px solid #9d9a91;
+  border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--white);
   color: var(--ink);
   padding: 8px 11px;
 }
-button { cursor: pointer; }
-button { font-weight: 650; transition: background 120ms ease, color 120ms ease, transform 120ms ease; }
-button:hover { background: #8e5bb3; color: #fff; transform: translateY(-1px); }
-[data-action="buy"] { border-color: var(--green); color: var(--green); }
-[data-action="sell"] { border-color: var(--red); color: var(--red); }
+button {
+  cursor: pointer;
+  font-weight: 650;
+  --tap-color: rgba(247, 234, 208, 0.6);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease, transform 90ms ease, box-shadow 90ms ease;
+}
+button:hover { background: #8e5bb3; color: #fff; border-color: #8e5bb3; transform: translateY(-1px); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
+button:active { transform: translateY(2px) scale(0.97); box-shadow: 0 0 0 rgba(0, 0, 0, 0.45); }
+select:hover, input:hover { border-color: var(--gold); }
+[data-action="buy"] { border-color: var(--green); color: var(--green); --tap-color: var(--green); }
+[data-action="sell"] { border-color: var(--red); color: var(--red); --tap-color: var(--red); }
+/*
+  Poke feedback: the button squashes under the pointer, overshoots back, and
+  throws a short ring in its own accent colour. Layout is unaffected because
+  only transform and box-shadow animate.
+*/
+@keyframes button-pop {
+  0% { transform: translateY(2px) scale(0.95); box-shadow: 0 0 0 0 var(--tap-color); }
+  55% { transform: translateY(0) scale(1.05); box-shadow: 0 0 0 5px rgba(0, 0, 0, 0); }
+  100% { transform: translateY(0) scale(1); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45); }
+}
+button.tap { animation: button-pop 190ms ease-out; }
 button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid rgba(165, 116, 43, 0.35); outline-offset: 2px; }
 input { width: 70px; }
 #player-name { width: 150px; margin-left: 6px; }
@@ -256,28 +274,28 @@ section { margin-top: 20px; }
 */
 @keyframes shell-shake-sm {
   0%, 100% { transform: translate(0, 0) rotate(0); }
-  30% { transform: translate(-1.5px, 1px) rotate(-0.08deg); }
-  60% { transform: translate(1.5px, -1px) rotate(0.06deg); }
-  85% { transform: translate(-0.5px, 0.5px) rotate(-0.03deg); }
+  25% { transform: translate(-3px, 2px) rotate(-0.14deg); }
+  50% { transform: translate(3px, -2px) rotate(0.12deg); }
+  75% { transform: translate(-1.5px, 1px) rotate(-0.06deg); }
 }
 @keyframes shell-shake-md {
   0%, 100% { transform: translate(0, 0) rotate(0); }
-  20% { transform: translate(-3px, 2px) rotate(-0.18deg); }
-  40% { transform: translate(3px, -2px) rotate(0.16deg); }
-  60% { transform: translate(-2px, -1px) rotate(-0.1deg); }
-  80% { transform: translate(2px, 1px) rotate(0.08deg); }
+  20% { transform: translate(-5px, 3px) rotate(-0.26deg); }
+  40% { transform: translate(5px, -3px) rotate(0.22deg); }
+  60% { transform: translate(-3px, -2px) rotate(-0.14deg); }
+  80% { transform: translate(3px, 2px) rotate(0.1deg); }
 }
 @keyframes shell-shake-lg {
   0%, 100% { transform: translate(0, 0) rotate(0); }
-  15% { transform: translate(-6px, 4px) rotate(-0.35deg); }
-  30% { transform: translate(6px, -4px) rotate(0.3deg); }
-  45% { transform: translate(-5px, -3px) rotate(-0.24deg); }
-  60% { transform: translate(4px, 3px) rotate(0.2deg); }
-  78% { transform: translate(-2px, -1px) rotate(-0.1deg); }
+  15% { transform: translate(-8px, 5px) rotate(-0.45deg); }
+  30% { transform: translate(8px, -5px) rotate(0.4deg); }
+  45% { transform: translate(-6px, -4px) rotate(-0.3deg); }
+  60% { transform: translate(6px, 4px) rotate(0.26deg); }
+  78% { transform: translate(-3px, -2px) rotate(-0.12deg); }
 }
-.shake-sm { animation: shell-shake-sm 140ms ease-out both; }
-.shake-md { animation: shell-shake-md 200ms ease-out both; }
-.shake-lg { animation: shell-shake-lg 280ms ease-out both; }
+.shake-sm { animation: shell-shake-sm 170ms ease-out both; }
+.shake-md { animation: shell-shake-md 220ms ease-out both; }
+.shake-lg { animation: shell-shake-lg 300ms ease-out both; }
 ol { padding-left: 25px; }
 li { margin: 4px 0; }
 small { color: var(--muted); }
@@ -305,6 +323,6 @@ small { color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) {
   body::after { animation: none; opacity: 0; }
-  button:hover { transform: none; }
-  .shake-sm, .shake-md, .shake-lg { animation: none !important; }
+  button:hover, button:active { transform: none; }
+  .shake-sm, .shake-md, .shake-lg, button.tap { animation: none !important; }
 }
