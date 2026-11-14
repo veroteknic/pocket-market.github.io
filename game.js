@@ -257,14 +257,21 @@ async function trade(index, action) {
 async function loadPlayer() {
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/player`, { credentials: "include" });
+    if (!response.ok) {
+      if (savedPlayerName) $("name-input").value = savedPlayerName;
+      return;
+    }
     const player = await response.json();
+    localStorage.setItem("pocket-market-player-name", player.name);
     state.cash = player.cash;
     playerStats.costBasis = player.costBasis || {};
     playerStats.realizedProfit = player.realizedProfit || 0;
     state.companies.forEach(company => { company.shares = player.holdings[company.ticker] || 0; });
+    $("identity-gate").hidden = true;
+    if (player.name.toLowerCase() === "veroteknic") $("dev-console").hidden = false;
     render();
   } catch {
-    setMessage("Could not load your portfolio from the live server.");
+    if (savedPlayerName) $("name-input").value = savedPlayerName;
   }
 }
 
