@@ -34,6 +34,7 @@ const companies = [
 let state;
 let marketHistory = {};
 let pendingTrade = null;
+let lastEventKey = "";
 let playerStats = { costBasis: {}, realizedProfit: 0 };
 const $ = (id) => document.getElementById(id);
 const money = (value) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -47,6 +48,20 @@ function applyCrt(enabled, persist = true) {
 }
 applyCrt(localStorage.getItem("pocket-market-crt") !== "off", false);
 $("dev-crt").addEventListener("click", () => applyCrt(document.body.dataset.crt === "off"));
+
+// Three-tier screenshake. Magnitude scales with the impulse, and the whole
+// thing is skipped when the OS asks for reduced motion.
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let shakeCleanup = 0;
+function shake(intensity = "sm") {
+  if (reducedMotion.matches) return;
+  const shell = document.querySelector("main");
+  shell.classList.remove("shake-sm", "shake-md", "shake-lg");
+  void shell.offsetWidth;
+  shell.classList.add(`shake-${intensity}`);
+  clearTimeout(shakeCleanup);
+  shakeCleanup = setTimeout(() => shell.classList.remove("shake-sm", "shake-md", "shake-lg"), 400);
+}
 
 function newGame() {
   state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), finished: false };
@@ -242,6 +257,7 @@ async function trade(index, action) {
   setMessage(`${action === "buy" ? "Buying" : "Selling"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name}…`);
   render();
 
+  const realizedBefore = playerStats.realizedProfit;
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/trade`, {
       method: "POST",
@@ -255,6 +271,8 @@ async function trade(index, action) {
     playerStats.costBasis = result.player.costBasis || {};
     playerStats.realizedProfit = result.player.realizedProfit || 0;
     state.companies.forEach(item => { item.shares = result.player.holdings[item.ticker] || 0; });
+    const realizedGain = (result.player.realizedProfit || 0) - realizedBefore;
+    shake(Math.abs(realizedGain) >= 250 ? "md" : "sm");
     setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}.`);
   } catch {
     setMessage("Could not reach the live market server.");
@@ -305,6 +323,11 @@ function connectToMarket() {
       $("sentiment").textContent = `${mood} (${Math.round(update.sentiment)})`;
     }
     if (update.event) {
+      const eventKey = `${update.event.expiresAt}:${update.event.headline}`;
+      if (eventKey !== lastEventKey) {
+        lastEventKey = eventKey;
+        shake(Math.abs(update.event.effect || 0) >= 0.06 ? "lg" : "md");
+      }
       $("news-kind").textContent = update.event.kind === "boom" ? "MARKET BOOM" : "FLASH CRASH";
       $("news-headline").textContent = update.event.headline;
       $("news-detail").textContent = "React quickly. This event is affecting the live market.";

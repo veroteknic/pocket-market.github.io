@@ -29,6 +29,7 @@ body {
   padding: 32px 20px 60px;
   position: relative;
   min-height: 100vh;
+  overflow-x: clip;
   background: #0e0b12;
   color: var(--ink);
   font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -245,6 +246,38 @@ section { margin-top: 20px; }
 .featured-news h3 { margin: 8px 0 4px; font: 700 19px/1.2 Georgia, serif; }
 .featured-news p { margin: 0; font-size: 13px; }
 .news-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+
+/*
+  Screenshake: three magnitudes rather than one, so a routine trade feels
+  different from a crash. Small impulses are translation only; medium and
+  large add a fraction of a degree of rotation, which is what makes the motion
+  read as force instead of a rendering glitch. The shell is shaken, never the
+  fixed gate or dev console, and the class is cleared on animationend.
+*/
+@keyframes shell-shake-sm {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  30% { transform: translate(-1.5px, 1px) rotate(-0.08deg); }
+  60% { transform: translate(1.5px, -1px) rotate(0.06deg); }
+  85% { transform: translate(-0.5px, 0.5px) rotate(-0.03deg); }
+}
+@keyframes shell-shake-md {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-3px, 2px) rotate(-0.18deg); }
+  40% { transform: translate(3px, -2px) rotate(0.16deg); }
+  60% { transform: translate(-2px, -1px) rotate(-0.1deg); }
+  80% { transform: translate(2px, 1px) rotate(0.08deg); }
+}
+@keyframes shell-shake-lg {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  15% { transform: translate(-6px, 4px) rotate(-0.35deg); }
+  30% { transform: translate(6px, -4px) rotate(0.3deg); }
+  45% { transform: translate(-5px, -3px) rotate(-0.24deg); }
+  60% { transform: translate(4px, 3px) rotate(0.2deg); }
+  78% { transform: translate(-2px, -1px) rotate(-0.1deg); }
+}
+.shake-sm { animation: shell-shake-sm 140ms ease-out both; }
+.shake-md { animation: shell-shake-md 200ms ease-out both; }
+.shake-lg { animation: shell-shake-lg 280ms ease-out both; }
 ol { padding-left: 25px; }
 li { margin: 4px 0; }
 small { color: var(--muted); }
@@ -273,4 +306,5 @@ small { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   body::after { animation: none; opacity: 0; }
   button:hover { transform: none; }
+  .shake-sm, .shake-md, .shake-lg { animation: none !important; }
 }
