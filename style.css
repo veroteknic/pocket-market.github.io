@@ -8,6 +8,18 @@
   --green: #52f29b;
   --red: #ff466b;
   --gold: #ffc857;
+
+  /*
+    CRT switchboard. Every layer is separate so each can be judged on its own.
+    Set a value to 0 to switch that layer off. `--crt-curve` rounds the tube edge.
+  */
+  --crt-scanlines: 0.16;
+  --crt-aperture: 0.5;
+  --crt-vignette: 0.72;
+  --crt-bloom: 0.3;
+  --crt-flicker: 0.035;
+  --crt-curve: 26px;
+  --crt-layer: 9998;
 }
 
 * { box-sizing: border-box; }
@@ -21,22 +33,86 @@ body {
   color: var(--ink);
   font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
 }
-body::before,
+/*
+  CRT tube overlay, built as four independent layers:
+    1. .crt::before  scanlines + aperture grille
+    2. .crt::after   vignette + edge curvature + moiré
+    3. body::before  phosphor bloom
+    4. body::after   slow mains flicker (motion, gated below)
+
+  Technique: treat a CRT as stackable layers rather than one effect, keep the
+  scanline period on whole pixels so fractional device-pixel ratios do not
+  alias, and never ship motion without a reduced-motion fallback.
+*/
+.crt {
+  position: fixed;
+  inset: 0;
+  z-index: var(--crt-layer);
+  pointer-events: none;
+  border-radius: var(--crt-curve);
+}
+.crt::before,
+.crt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.crt::before {
+  opacity: var(--crt-scanlines);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.62) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 0, 82, calc(var(--crt-aperture) * 0.045)) 0 1px,
+      rgba(0, 255, 150, calc(var(--crt-aperture) * 0.045)) 1px 2px,
+      rgba(82, 150, 255, calc(var(--crt-aperture) * 0.045)) 2px 3px
+    );
+  background-size: 100% 3px, 3px 100%;
+}
+.crt::after {
+  opacity: var(--crt-vignette);
+  background-image:
+    radial-gradient(120% 92% at 50% 50%, transparent 56%, rgba(0, 0, 0, 0.78) 100%),
+    repeating-radial-gradient(circle at 28% 18%, rgba(255, 0, 170, 0.05) 0 1px, transparent 1px 6px);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.55), inset 0 0 240px rgba(0, 0, 0, 0.4);
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--crt-layer);
+  pointer-events: none;
+  opacity: var(--crt-bloom);
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(68% 52% at 50% -4%, rgba(124, 92, 255, 0.3), transparent 68%),
+    radial-gradient(58% 46% at 88% 102%, rgba(255, 62, 140, 0.2), transparent 70%),
+    radial-gradient(48% 40% at 6% 88%, rgba(62, 200, 255, 0.16), transparent 70%);
+}
 body::after {
   content: "";
   position: fixed;
   inset: 0;
+  z-index: var(--crt-layer);
   pointer-events: none;
-  z-index: 9998;
-}
-body::before {
-  opacity: 0.1;
-  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 4px);
+  background: #fff;
+  opacity: 0;
   mix-blend-mode: overlay;
+  animation: crt-flicker 5.5s linear infinite;
 }
-body::after {
-  opacity: 0.18;
-  background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.7) 100%), repeating-radial-gradient(circle at 30% 20%, rgba(255,0,160,0.04) 0 1px, transparent 1px 5px);
+@keyframes crt-flicker {
+  0%, 94%, 100% { opacity: 0; }
+  94.4% { opacity: var(--crt-flicker); }
+  95.1% { opacity: 0.004; }
+  95.7% { opacity: calc(var(--crt-flicker) * 0.6); }
+  96.2% { opacity: 0; }
+}
+body[data-crt="off"] .crt,
+body[data-crt="off"]::before,
+body[data-crt="off"]::after {
+  display: none;
 }
 main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding: 26px; border: 2px solid #8e5bb3; border-radius: 8px; background: var(--paper); box-shadow: 0 8px 0 #321f43, 0 16px 30px rgba(0, 0, 0, 0.45); }
 .masthead { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; padding-bottom: 25px; border-bottom: 2px solid var(--ink); }
@@ -78,6 +154,8 @@ main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding:
 .dev-grid span { color: #a9b8aa; font-size: 11px; }
 .dev-grid strong { color: #d7e8d9; font: 14px Consolas, monospace; }
 #dev-console pre { margin: 8px 0 0; white-space: pre-wrap; font: 12px/1.4 Consolas, monospace; }
+#dev-crt { margin-top: 10px; padding: 4px 8px; border-color: #4c6b52; background: transparent; color: #d7e8d9; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+#dev-crt:hover { background: #4c6b52; color: #10201a; transform: none; }
 h1 {
   margin: 0;
   font: 700 34px/1.1 Georgia, serif;
@@ -189,4 +267,10 @@ small { color: var(--muted); }
   .compact-heading { flex-direction: row; align-items: center; }
   .compact-heading label { margin-left: auto; }
   .lower-grid { grid-template-columns: 1fr; gap: 0; }
+  .crt { border-radius: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; opacity: 0; }
+  button:hover { transform: none; }
 }

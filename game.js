@@ -38,6 +38,16 @@ let playerStats = { costBasis: {}, realizedProfit: 0 };
 const $ = (id) => document.getElementById(id);
 const money = (value) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// CRT overlay switch. Stored on the body so the whole tube can be toggled
+// without touching layout; the choice survives reloads.
+function applyCrt(enabled, persist = true) {
+  document.body.dataset.crt = enabled ? "on" : "off";
+  $("dev-crt").textContent = `CRT: ${enabled ? "on" : "off"}`;
+  if (persist) localStorage.setItem("pocket-market-crt", enabled ? "on" : "off");
+}
+applyCrt(localStorage.getItem("pocket-market-crt") !== "off", false);
+$("dev-crt").addEventListener("click", () => applyCrt(document.body.dataset.crt === "off"));
+
 function newGame() {
   state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), finished: false };
   marketHistory = {};
