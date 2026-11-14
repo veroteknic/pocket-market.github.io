@@ -295,9 +295,6 @@ function connectToMarket() {
       $("sentiment").textContent = `${mood} (${Math.round(update.sentiment)})`;
     }
     if (update.event) {
-      document.body.classList.remove("market-shake");
-      void document.body.offsetWidth;
-      document.body.classList.add("market-shake");
       $("news-kind").textContent = update.event.kind === "boom" ? "MARKET BOOM" : "FLASH CRASH";
       $("news-headline").textContent = update.event.headline;
       $("news-detail").textContent = "React quickly. This event is affecting the live market.";
