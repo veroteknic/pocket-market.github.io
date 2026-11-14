@@ -3,8 +3,6 @@ const MAX_DAYS = 365;
 // Live Cloudflare Worker backend.
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
-const playerId = localStorage.getItem("pocket-market-player-id") || crypto.randomUUID();
-localStorage.setItem("pocket-market-player-id", playerId);
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
 const isDeveloper = () => getPlayerName().toLowerCase() === "veroteknik";
@@ -238,7 +236,8 @@ async function trade(index, action) {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/trade`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId, playerName: getPlayerName(), ticker: company.ticker, action, quantity: amount })
+      credentials: "include",
+      body: JSON.stringify({ ticker: company.ticker, action, quantity: amount })
     });
     const result = await response.json();
     if (!response.ok) return setMessage(result.error || "Trade rejected.");
@@ -257,7 +256,7 @@ async function trade(index, action) {
 
 async function loadPlayer() {
   try {
-    const response = await fetch(`${BACKEND_HTTP_URL}/api/player?playerId=${encodeURIComponent(playerId)}`);
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/player`, { credentials: "include" });
     const player = await response.json();
     state.cash = player.cash;
     playerStats.costBasis = player.costBasis || {};
@@ -332,7 +331,7 @@ function finishGame() {
 
 async function renderLeaderboard() {
   try {
-    const response = await fetch(`${BACKEND_HTTP_URL}/api/leaderboard`);
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/leaderboard`, { credentials: "include" });
     const scores = await response.json();
     $("leaderboard").innerHTML = scores.length
       ? scores.map((entry, index) => {
@@ -350,24 +349,32 @@ $("market").addEventListener("click", event => {
   if (button) trade(Number(button.dataset.index), button.dataset.action);
 });
 $("chart-stock").addEventListener("change", drawChart);
+let authMode = "register";
+$("auth-toggle").addEventListener("click", () => {
+  authMode = authMode === "register" ? "login" : "register";
+  $("auth-title").textContent = authMode === "register" ? "Create your account" : "Log in to Pocket Market";
+  $("auth-copy").textContent = authMode === "register" ? "Choose a unique name and password to enter the market." : "Use your existing market name and password.";
+  $("auth-submit").textContent = authMode === "register" ? "Create account" : "Log in";
+  $("auth-toggle").textContent = authMode === "register" ? "Already have an account? Log in" : "Need an account? Create one";
+  $("password-input").autocomplete = authMode === "register" ? "new-password" : "current-password";
+});
 $("name-form").addEventListener("submit", event => {
   event.preventDefault();
-  claimName($("name-input").value.trim());
+  claimName($("name-input").value.trim(), $("password-input").value);
 });
 newGame();
 connectToMarket();
 loadPlayer();
 
-if (savedPlayerName) {
-  claimName(savedPlayerName);
-}
+if (savedPlayerName) $("name-input").value = savedPlayerName;
 
-async function claimName(name) {
+async function claimName(name, password) {
   try {
-    const response = await fetch(`${BACKEND_HTTP_URL}/api/session`, {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/auth/${authMode}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playerId, name })
+      credentials: "include",
+      body: JSON.stringify({ name, password })
     });
     const result = await response.json();
     if (!response.ok) {

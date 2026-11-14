@@ -10,12 +10,14 @@
   <div id="identity-gate" class="identity-gate">
     <div class="identity-card">
       <p class="eyebrow">POCKET MARKET</p>
-      <h1>Choose your market name</h1>
-      <p>This name appears on today's leaderboard.</p>
+      <h1 id="auth-title">Create your account</h1>
+      <p id="auth-copy">Choose a unique name and password to enter the market.</p>
       <form id="name-form">
         <input id="name-input" type="text" maxlength="16" minlength="3" required autocomplete="nickname" placeholder="Your name">
-        <button type="submit">Enter market</button>
+        <input id="password-input" type="password" minlength="8" maxlength="128" required autocomplete="new-password" placeholder="Password">
+        <button id="auth-submit" type="submit">Create account</button>
       </form>
+      <button id="auth-toggle" type="button" class="link-button">Already have an account? Log in</button>
       <p id="name-error" class="form-error" aria-live="polite"></p>
     </div>
   </div>

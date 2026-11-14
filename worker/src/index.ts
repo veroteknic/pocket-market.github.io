@@ -27,6 +27,7 @@ type PlayerState = {
   costBasis: Partial<Record<keyof Prices, number>>;
   realizedProfit: number;
 };
+type UserRecord = { playerId: string; passwordHash: string };
 type LeaderEntry = { name: string; score: number; rank: number; rankChange: number };
 type MarketEvent = { headline: string; kind: "boom" | "crash"; effect: number; expiresAt: number };
 type MarketState = { day: number; tick: number; updatedAt: number; prices: Prices; history: History; orderFlow: Partial<Record<keyof Prices, number>>; sentiment: number; event: MarketEvent | null };
@@ -45,6 +46,29 @@ function currentDayOfYear() {
   const start = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
   const elapsedDays = Math.floor((today.getTime() - start.getTime()) / 86400000);
   return Math.max(1, Math.min(MAX_DAYS, elapsedDays + 1));
+}
+
+const textEncoder = new TextEncoder();
+
+function bytesToHex(bytes: ArrayBuffer) {
+  return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashPassword(password: string, salt: string) {
+  const key = await crypto.subtle.importKey("raw", textEncoder.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: textEncoder.encode(salt), iterations: 100000, hash: "SHA-256" },
+    key,
+    256,
+  );
+  return `${salt}.${bytesToHex(bits)}`;
+}
+
+async function verifyPassword(password: string, storedHash: string) {
+  const [salt, expected] = storedHash.split(".");
+  if (!salt || !expected) return false;
+  const actual = await hashPassword(password, salt);
+  return actual === `${salt}.${expected}`;
 }
 
 function movePrice(price: number, ticker: keyof Prices) {
@@ -176,6 +200,40 @@ export class Market extends DurableObject {
     return migrated;
   }
 
+  private validateCredentials(name: string, password: string) {
+    const cleanName = name.trim();
+    if (!/^[a-zA-Z0-9 _-]{3,16}$/.test(cleanName)) throw new Error("Name must be 3–16 letters, numbers, spaces, _ or -");
+    if (password.length < 8 || password.length > 128) throw new Error("Password must be 8–128 characters");
+    return cleanName;
+  }
+
+  async registerAccount(name: string, password: string) {
+    const cleanName = this.validateCredentials(name, password);
+    const normalized = cleanName.toLowerCase();
+    if (await this.ctx.storage.get<UserRecord>(`user:${normalized}`)) throw new Error("That name is already taken");
+    const playerId = crypto.randomUUID();
+    const player = { name: cleanName, cash: 10000, holdings: {}, costBasis: {}, realizedProfit: 0 } satisfies PlayerState;
+    const passwordHash = await hashPassword(password, crypto.randomUUID());
+    const token = crypto.randomUUID();
+    await this.ctx.storage.put(`user:${normalized}`, { playerId, passwordHash });
+    await this.ctx.storage.put(`player:${playerId}`, player);
+    await this.ctx.storage.put(`session:${token}`, playerId);
+    return { token, player };
+  }
+
+  async loginAccount(name: string, password: string) {
+    const cleanName = name.trim();
+    const record = await this.ctx.storage.get<UserRecord>(`user:${cleanName.toLowerCase()}`);
+    if (!record || !(await verifyPassword(password, record.passwordHash))) throw new Error("Invalid name or password");
+    const token = crypto.randomUUID();
+    await this.ctx.storage.put(`session:${token}`, record.playerId);
+    return { token, player: await this.getPlayer(record.playerId) };
+  }
+
+  async playerIdForSession(token: string) {
+    return token ? await this.ctx.storage.get<string>(`session:${token}`) : undefined;
+  }
+
   async registerPlayer(playerId: string, name: string): Promise<PlayerState> {
     if (!/^[a-zA-Z0-9_-]{3,64}$/.test(playerId)) throw new Error("Invalid player ID");
     const cleanName = name.trim();
@@ -212,7 +270,7 @@ export class Market extends DurableObject {
     }));
   }
 
-  async trade(playerId: string, playerName: string, ticker: string, action: string, quantity: number) {
+  async trade(playerId: string, ticker: string, action: string, quantity: number) {
     if (!/^[a-zA-Z0-9_-]{3,64}$/.test(playerId)) throw new Error("Invalid player ID");
     if (!(ticker in startingPrices) || !["buy", "sell"].includes(action)) throw new Error("Invalid trade");
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) throw new Error("Invalid quantity");
@@ -220,7 +278,6 @@ export class Market extends DurableObject {
     const symbol = ticker as keyof Prices;
     const market = await this.getMarket();
     const player = await this.getPlayer(playerId);
-    if (typeof playerName === "string" && playerName.trim()) player.name = playerName.trim().slice(0, 16);
     const owned = player.holdings[symbol] || 0;
     const costBasis = player.costBasis[symbol] || 0;
     const total = market.prices[symbol] * quantity;
@@ -277,11 +334,23 @@ function movePriceWithPressure(price: number, ticker: keyof Prices, flow: number
   return Math.max(1, Math.round(price * (1 + randomMovement + playerInfluence + moodInfluence + eventEffect) * 100) / 100);
 }
 
+const FRONTEND_ORIGIN = "https://veroteknic.github.io";
+
+function sessionToken(request: Request) {
+  const cookie = request.headers.get("Cookie") || "";
+  return cookie.split(";").map(part => part.trim()).find(part => part.startsWith("pm_session="))?.slice("pm_session=".length) || "";
+}
+
+function sessionCookie(token: string) {
+  return `pm_session=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=2592000`;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const cors = {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": FRONTEND_ORIGIN,
+      "Access-Control-Allow-Credentials": "true",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
@@ -289,39 +358,44 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
     if (url.pathname === "/api/market") {
-      const market = env.MARKET.getByName("global-school-year-market-v11");
+      const market = env.MARKET.getByName("global-school-year-market-v12");
       const state = await market.getMarket();
       return Response.json({ ...state, day: currentDayOfYear() }, { headers: cors });
     }
 
     if (url.pathname === "/api/player" && request.method === "GET") {
-      const playerId = url.searchParams.get("playerId") || "";
-      const market = env.MARKET.getByName("global-school-year-market-v11");
+      const market = env.MARKET.getByName("global-school-year-market-v12");
+      const playerId = await market.playerIdForSession(sessionToken(request));
+      if (!playerId) return Response.json({ error: "Not authenticated" }, { status: 401, headers: cors });
       return Response.json(await market.getPlayer(playerId), { headers: cors });
     }
 
-    if (url.pathname === "/api/session" && request.method === "POST") {
+    if (["/api/auth/register", "/api/auth/login"].includes(url.pathname) && request.method === "POST") {
       try {
-        const body = await request.json() as { playerId?: string; name?: string };
-        const market = env.MARKET.getByName("global-school-year-market-v11");
-        const player = await market.registerPlayer(body.playerId || "", body.name || "");
-        return Response.json(player, { headers: cors });
+        const body = await request.json() as { name?: string; password?: string };
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        const result = url.pathname.endsWith("/register")
+          ? await market.registerAccount(body.name || "", body.password || "")
+          : await market.loginAccount(body.name || "", body.password || "");
+        return Response.json(result.player, { headers: { ...cors, "Set-Cookie": sessionCookie(result.token) } });
       } catch (error) {
         return Response.json({ error: error instanceof Error ? error.message : "Could not register name" }, { status: 400, headers: cors });
       }
     }
 
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
-      const market = env.MARKET.getByName("global-school-year-market-v11");
+      const market = env.MARKET.getByName("global-school-year-market-v12");
       const state = await market.getMarket();
       return Response.json(await market.getLeaderboard(state), { headers: cors });
     }
 
     if (url.pathname === "/api/trade" && request.method === "POST") {
       try {
-        const body = await request.json() as { playerId?: string; playerName?: string; ticker?: string; action?: string; quantity?: number };
-        const market = env.MARKET.getByName("global-school-year-market-v11");
-        const result = await market.trade(body.playerId || "", body.playerName || "Anonymous", body.ticker || "", body.action || "", body.quantity || 0);
+        const body = await request.json() as { ticker?: string; action?: string; quantity?: number };
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        const playerId = await market.playerIdForSession(sessionToken(request));
+        if (!playerId) return Response.json({ error: "Not authenticated" }, { status: 401, headers: cors });
+        const result = await market.trade(playerId, body.ticker || "", body.action || "", body.quantity || 0);
         return Response.json(result, { headers: cors });
       } catch (error) {
         return Response.json({ error: error instanceof Error ? error.message : "Trade rejected" }, { status: 400, headers: cors });
@@ -332,7 +406,7 @@ export default {
       if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
         return new Response("Expected a WebSocket connection.", { status: 426 });
       }
-      const market = env.MARKET.getByName("global-school-year-market-v11");
+      const market = env.MARKET.getByName("global-school-year-market-v12");
       return market.fetch(request);
     }
 
