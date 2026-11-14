@@ -1,13 +1,13 @@
 :root {
-  --paper: #f7edcf;
-  --paper-deep: #ead5a9;
-  --white: #fff8e4;
-  --ink: #3a2417;
-  --muted: #806448;
-  --line: #b8935b;
-  --green: #356b45;
-  --red: #a94432;
-  --gold: #a56d24;
+  --paper: #18141d;
+  --paper-deep: #241d2c;
+  --white: #241d2c;
+  --ink: #f7ead0;
+  --muted: #b7a5bc;
+  --line: #5b4565;
+  --green: #52f29b;
+  --red: #ff466b;
+  --gold: #ffc857;
 }
 
 * { box-sizing: border-box; }
@@ -15,11 +15,30 @@ body:has(.identity-gate:not([hidden])) { overflow: hidden; }
 body {
   margin: 0;
   padding: 32px 20px 60px;
-  background: #c99b5e;
+  position: relative;
+  min-height: 100vh;
+  background: #0e0b12;
   color: var(--ink);
   font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
 }
-main { max-width: 1080px; margin: auto; padding: 26px; border: 3px solid #684329; border-radius: 8px; background: var(--paper); box-shadow: 0 8px 0 #8e6335, 0 16px 30px rgba(58, 36, 23, 0.2); }
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+}
+body::before {
+  opacity: 0.1;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.12) 0, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 4px);
+  mix-blend-mode: overlay;
+}
+body::after {
+  opacity: 0.18;
+  background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.7) 100%), repeating-radial-gradient(circle at 30% 20%, rgba(255,0,160,0.04) 0 1px, transparent 1px 5px);
+}
+main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding: 26px; border: 2px solid #8e5bb3; border-radius: 8px; background: var(--paper); box-shadow: 0 8px 0 #321f43, 0 16px 30px rgba(0, 0, 0, 0.45); }
 .masthead { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; padding-bottom: 25px; border-bottom: 2px solid var(--ink); }
 .masthead h1 { margin-top: 8px; }
 .subtitle { margin: 10px 0 0; font-size: 16px; }
@@ -33,9 +52,9 @@ main { max-width: 1080px; margin: auto; padding: 26px; border: 3px solid #684329
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(247, 237, 207, 0.98);
+  background: rgba(14, 11, 18, 0.98);
 }
-.identity-card { width: min(520px, 100%); border: 3px solid #684329; border-radius: 7px; padding: 32px; background: var(--white); box-shadow: 6px 6px 0 #8e6335; }
+.identity-card { width: min(520px, 100%); border: 2px solid #8e5bb3; border-radius: 7px; padding: 32px; background: var(--white); box-shadow: 6px 6px 0 #321f43; }
 .identity-card h1 { margin-bottom: 8px; }
 .identity-card form { display: flex; gap: 8px; margin-top: 22px; }
 .identity-card input { flex: 1; width: auto; }
@@ -77,7 +96,7 @@ p { color: var(--muted); }
   border-radius: 12px;
   padding: 16px 18px;
   margin: 22px 0 18px;
-  background: var(--white);
+  background: rgba(36, 29, 44, 0.9);
   box-shadow: 3px 3px 0 rgba(58, 36, 23, 0.12);
 }
 .status span, .status strong { margin-right: 26px; }
@@ -111,7 +130,7 @@ button, select, input {
 }
 button { cursor: pointer; }
 button { font-weight: 650; transition: background 120ms ease, color 120ms ease, transform 120ms ease; }
-button:hover { background: #684329; color: #fff8e4; transform: translateY(-1px); }
+button:hover { background: #8e5bb3; color: #fff; transform: translateY(-1px); }
 [data-action="buy"] { border-color: var(--green); color: var(--green); }
 [data-action="sell"] { border-color: var(--red); color: var(--red); }
 button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid rgba(165, 116, 43, 0.35); outline-offset: 2px; }
