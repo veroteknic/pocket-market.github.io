@@ -170,9 +170,19 @@ function setDeveloperControls(authorized) {
   }
 }
 
+// Collapsing the drawer also releases the reserved layout column.
+function setDevPanelOpen(open) {
+  $("dev-console").classList.toggle("collapsed", !open);
+  document.body.classList.toggle("dev-open", open);
+  $("dev-toggle").textContent = open ? "Hide" : "Open";
+  $("dev-toggle").setAttribute("aria-expanded", String(open));
+}
+$("dev-toggle").addEventListener("click", () => setDevPanelOpen($("dev-console").classList.contains("collapsed")));
+
 async function loadDeveloperAccess() {
   if (!isDeveloper()) return;
   $("dev-console").hidden = false;
+  setDevPanelOpen(true);
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/dev/status`, { credentials: "include" });
     const status = await response.json();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-15-pl2">
+  <link rel="stylesheet" href="style.css?v=2026-11-15-pl3">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -98,63 +98,68 @@
     </div>
   </main>
   <aside id="dev-console" hidden>
-    <strong>DEV DASHBOARD</strong>
-    <div class="dev-grid">
-      <span>Connection<strong id="dev-connection">Online</strong></span>
-      <span>Day<strong id="dev-day">—</strong></span>
-      <span>Tick<strong id="dev-tick">—</strong></span>
-      <span>Sentiment<strong id="dev-sentiment">—</strong></span>
-      <span>Event<strong id="dev-event">None</strong></span>
+    <div class="dev-head">
+      <strong>DEV DASHBOARD</strong>
+      <button id="dev-toggle" type="button" aria-expanded="true">Hide</button>
     </div>
-    <details>
-      <summary>Raw market state</summary>
-      <pre id="dev-output">Waiting for market data…</pre>
-    </details>
-    <button id="dev-crt" type="button">CRT: on</button>
-    <form id="dev-auth" class="dev-auth">
-      <input id="dev-password" type="password" autocomplete="current-password" placeholder="Developer password">
-      <button type="submit">Unlock controls</button>
-    </form>
-    <p id="dev-auth-error" class="dev-feedback" aria-live="polite"></p>
-    <div id="dev-controls" hidden>
-      <p class="dev-label">Market override</p>
-      <div class="dev-actions">
-        <select id="dev-event-ticker" aria-label="Event ticker">
-          <option value="">Whole market</option>
-          <option value="MTA">Moon Taco</option>
-          <option value="PXP">PixelPets</option>
-          <option value="RMP">RoboMop</option>
-          <option value="CLD">Cloudy Soda</option>
-        </select>
-        <button type="button" data-dev-event="boom">Force boom</button>
-        <button type="button" data-dev-event="crash">Force crash</button>
+    <div id="dev-body">
+      <div class="dev-grid">
+        <span>Connection<strong id="dev-connection">Online</strong></span>
+        <span>Day<strong id="dev-day">—</strong></span>
+        <span>Tick<strong id="dev-tick">—</strong></span>
+        <span>Sentiment<strong id="dev-sentiment">—</strong></span>
+        <span>Event<strong id="dev-event">None</strong></span>
       </div>
-      <div class="dev-actions">
-        <input id="dev-sentiment" type="number" min="-100" max="100" value="0" aria-label="Market sentiment">
-        <button type="button" data-dev-action="sentiment">Set sentiment</button>
+      <details>
+        <summary>Raw market state</summary>
+        <pre id="dev-output">Waiting for market data…</pre>
+      </details>
+      <button id="dev-crt" type="button">CRT: on</button>
+      <form id="dev-auth" class="dev-auth">
+        <input id="dev-password" type="password" autocomplete="current-password" placeholder="Developer password">
+        <button type="submit">Unlock controls</button>
+      </form>
+      <p id="dev-auth-error" class="dev-feedback" aria-live="polite"></p>
+      <div id="dev-controls" hidden>
+        <p class="dev-label">Market override</p>
+        <div class="dev-actions">
+          <select id="dev-event-ticker" aria-label="Event ticker">
+            <option value="">Whole market</option>
+            <option value="MTA">Moon Taco</option>
+            <option value="PXP">PixelPets</option>
+            <option value="RMP">RoboMop</option>
+            <option value="CLD">Cloudy Soda</option>
+          </select>
+          <button type="button" data-dev-event="boom">Force boom</button>
+          <button type="button" data-dev-event="crash">Force crash</button>
+        </div>
+        <div class="dev-actions">
+          <input id="dev-sentiment" type="number" min="-100" max="100" value="0" aria-label="Market sentiment">
+          <button type="button" data-dev-action="sentiment">Set sentiment</button>
+        </div>
+        <p class="dev-label">Player override</p>
+        <div class="dev-actions">
+          <input id="dev-cash" type="number" min="0" max="1000000" step="0.01" aria-label="Player cash">
+          <button type="button" data-dev-action="cash">Set cash</button>
+        </div>
+        <div class="dev-actions">
+          <select id="dev-holding-ticker" aria-label="Holding ticker">
+            <option value="MTA">MTA</option><option value="PXP">PXP</option>
+            <option value="RMP">RMP</option><option value="CLD">CLD</option>
+          </select>
+          <input id="dev-holding-quantity" type="number" min="0" max="10000" value="0" aria-label="Holding quantity">
+          <button type="button" data-dev-action="holding">Set holding</button>
+        </div>
+        <div class="dev-actions">
+          <button type="button" data-dev-action="reset">Reset my player</button>
+        </div>
+        <p class="dev-label">Account cleanup</p>
+        <div class="dev-actions">
+          <input id="dev-delete-name" type="text" maxlength="16" placeholder="Account name" aria-label="Account name to delete">
+          <button type="button" data-dev-action="delete">Delete account</button>
+        </div>
+        <p id="dev-feedback" class="dev-feedback" aria-live="polite"></p>
       </div>
-      <p class="dev-label">Player override</p>
-      <div class="dev-actions">
-        <input id="dev-cash" type="number" min="0" max="1000000" step="0.01" aria-label="Player cash">
-        <button type="button" data-dev-action="cash">Set cash</button>
-      </div>
-      <div class="dev-actions">
-        <select id="dev-holding-ticker" aria-label="Holding ticker">
-          <option value="MTA">MTA</option><option value="PXP">PXP</option>
-          <option value="RMP">RMP</option><option value="CLD">CLD</option>
-        </select>
-        <input id="dev-holding-quantity" type="number" min="0" max="10000" value="0" aria-label="Holding quantity">
-        <button type="button" data-dev-action="holding">Set holding</button>
-      </div>
-      <div class="dev-actions">
-        <button type="button" data-dev-action="reset">Reset my player</button>
-      </div>
-      <p class="dev-label">Account cleanup</p>
-      <div class="dev-actions">
-        <input id="dev-delete-name" type="text" maxlength="16" placeholder="Account name" aria-label="Account name to delete">
-        <button type="button" data-dev-action="delete">Delete account</button>
-      </div>
-      <p id="dev-feedback" class="dev-feedback" aria-live="polite"></p>
     </div>
   </aside>
   <script src="game.js"></script>
