@@ -4,15 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-15-sound">
+  <link rel="stylesheet" href="style.css?v=2026-11-15-copy">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
   <div id="identity-gate" class="identity-gate">
     <div class="identity-card">
-      <p class="eyebrow">POCKET MARKET</p>
       <h1 id="auth-title">Create your account</h1>
-      <p id="auth-copy">Choose a unique name and password to enter the market.</p>
+      <p id="auth-copy">Pick a name and a password. No email, no real money.</p>
       <form id="name-form">
         <input id="name-input" type="text" maxlength="16" minlength="3" required autocomplete="nickname" placeholder="Your name">
         <input id="password-input" type="password" minlength="8" maxlength="128" required autocomplete="new-password" placeholder="Password">
@@ -25,9 +24,8 @@
   <main>
     <header class="masthead">
       <div>
-        <p class="eyebrow">POCKET MARKET <span class="eyebrow-dot"></span> SCHOOL YEAR EDITION</p>
         <h1>Pocket Market</h1>
-        <p class="subtitle">A shared, fast-moving market for curious traders.</p>
+        <p class="subtitle">Four companies, one shared board, fake money. Prices tick every 15 seconds whether you trade or not.</p>
       </div>
       <div class="masthead-side">
         <div class="live-badge"><span class="live-dot"></span> Live market</div>
@@ -43,14 +41,11 @@
       <span>Mood: <span id="sentiment">Neutral</span></span>
     </section>
 
-    <p id="message">Start the school year, then trade while the days pass automatically.</p>
+    <p id="message">Pick a company, enter a share count, and trade. The market ticks every 15 seconds.</p>
 
     <section class="market-section">
       <div class="section-heading">
-        <div>
-          <p class="section-kicker">THE BOARD</p>
-          <h2>Today’s market</h2>
-        </div>
+        <h2>Today’s market</h2>
         <span class="section-note">Prices move every 15 seconds</span>
       </div>
       <table class="market-table">
@@ -63,10 +58,7 @@
 
     <section class="chart-panel">
       <div class="section-heading compact-heading">
-        <div>
-          <p class="section-kicker">THE TAPE</p>
-          <h2>Price history</h2>
-        </div>
+        <h2>Price history</h2>
         <label for="chart-stock">View <select id="chart-stock">
           <option value="MTA">Moon Taco (MTA)</option>
           <option value="PXP">PixelPets (PXP)</option>
@@ -79,22 +71,17 @@
 
     <div class="lower-grid">
       <section>
-        <p class="section-kicker">SIGNALS</p>
         <h2>Market news</h2>
         <article id="featured-news" class="featured-news">
-          <span id="news-kind" class="news-kind">LIVE</span>
-          <h3 id="news-headline">The market is open.</h3>
-          <p id="news-detail">Watch the tape for the next move.</p>
+          <h3 id="news-headline">All quiet on the board.</h3>
+          <p id="news-detail">Company and market events land here the moment they happen.</p>
         </article>
-        <ul id="news" class="news-list"></ul>
         <div class="daily-recap">
-          <p class="section-kicker">DAILY TAPE</p>
-          <p id="daily-summary">Collecting the first live ticks.</p>
+          <p id="daily-summary">Waiting for the first closed day.</p>
         </div>
       </section>
 
       <section>
-        <p class="section-kicker">THE RACE</p>
         <h2>Daily leaderboard</h2>
         <ol id="leaderboard"><li>No scores yet today.</li></ol>
       </section>
@@ -165,6 +152,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-15-sound"></script>
+  <script src="game.js?v=2026-11-15-copy"></script>
 </body>
 </html>

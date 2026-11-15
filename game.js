@@ -1,6 +1,5 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
-// Live Cloudflare Worker backend.
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -168,7 +167,6 @@ function applySound(enabled, persist = true) {
 applySound(sound.enabled, false);
 $("sound-toggle").addEventListener("click", () => {
   applySound(!sound.enabled);
-  // A short confirmation cue after unmuting, and none while muting.
   if (sound.enabled) cue("buy");
 });
 document.addEventListener("pointerdown", () => { if (sound.enabled) audioContext(); }, { once: true });
@@ -236,7 +234,7 @@ function setDeveloperControls(authorized) {
   }
 }
 
-// Collapsing the drawer also releases the reserved layout column.
+// Collapsing the drawer releases the layout column it reserves.
 function setDevPanelOpen(open) {
   $("dev-console").classList.toggle("collapsed", !open);
   document.body.classList.toggle("dev-open", open);
@@ -346,13 +344,13 @@ function drawChart() {
   const plotHeight = height - top - bottom;
 
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#17121f";
+  ctx.fillStyle = "#1b1710";
   ctx.fillRect(0, 0, width, height);
 
   ctx.font = "11px Segoe UI, Arial, sans-serif";
   ctx.textBaseline = "middle";
-  ctx.strokeStyle = "#3b304b";
-  ctx.fillStyle = "#c5b3ca";
+  ctx.strokeStyle = "#3d3324";
+  ctx.fillStyle = "#c8b897";
   ctx.lineWidth = 1;
   for (let index = 0; index <= 4; index += 1) {
     const y = top + (index / 4) * plotHeight;
@@ -361,7 +359,7 @@ function drawChart() {
     ctx.lineTo(width - right, y);
     ctx.stroke();
   }
-  ctx.strokeStyle = "#665478";
+  ctx.strokeStyle = "#75603d";
   ctx.beginPath();
   ctx.moveTo(left, top);
   ctx.lineTo(left, height - bottom);
@@ -369,7 +367,7 @@ function drawChart() {
   ctx.stroke();
 
   if (points.length < 2) {
-    ctx.fillStyle = "#c5b3ca";
+    ctx.fillStyle = "#c8b897";
     ctx.textAlign = "center";
     ctx.fillText("Waiting for live price history…", left + plotWidth / 2, top + plotHeight / 2);
     ctx.textAlign = "left";
@@ -386,7 +384,7 @@ function drawChart() {
   const xFor = index => left + (index / (points.length - 1)) * plotWidth;
   const yFor = price => top + (1 - (price - min) / range) * plotHeight;
 
-  ctx.fillStyle = "#c5b3ca";
+  ctx.fillStyle = "#c8b897";
   ctx.textAlign = "right";
   for (let index = 0; index <= 4; index += 1) {
     const value = max - (index / 4) * range;
@@ -411,7 +409,7 @@ function drawChart() {
   ctx.closePath();
   const area = ctx.createLinearGradient(0, top, 0, height - bottom);
   area.addColorStop(0, last.price >= first.price ? "rgba(98, 237, 172, 0.24)" : "rgba(255, 92, 125, 0.22)");
-  area.addColorStop(1, "rgba(23, 18, 31, 0)");
+  area.addColorStop(1, "rgba(27, 23, 16, 0)");
   ctx.fillStyle = area;
   ctx.fill();
 
@@ -428,7 +426,7 @@ function drawChart() {
   const endpoint = line[line.length - 1];
   ctx.beginPath();
   ctx.arc(endpoint.x, endpoint.y, 5, 0, Math.PI * 2);
-  ctx.fillStyle = "#17121f";
+  ctx.fillStyle = "#1b1710";
   ctx.fill();
   ctx.strokeStyle = trendColor;
   ctx.lineWidth = 3;
@@ -557,17 +555,15 @@ function connectToMarket() {
         punctuate(update.event);
         cue(update.event.kind === "boom" ? "boom" : "crash");
       }
-      $("news-kind").textContent = update.event.kind === "boom" ? "MARKET BOOM" : "FLASH CRASH";
       $("news-headline").textContent = update.event.headline;
-      $("news-detail").textContent = update.event.detail || "React quickly. This event is affecting the live market.";
+      $("news-detail").textContent = update.event.detail || "Prices are already moving on this one.";
       $("featured-news").classList.remove("boom", "crash");
       $("featured-news").classList.add(update.event.kind);
       $("message").textContent = update.event.headline;
       $("message").classList.add("event-alert", update.event.kind);
     } else {
-      $("news-kind").textContent = "LIVE MARKET";
-      $("news-headline").textContent = "The market is open.";
-      $("news-detail").textContent = "Watch the tape for the next move.";
+      $("news-headline").textContent = "All quiet on the board.";
+      $("news-detail").textContent = "Company and market events land here the moment they happen.";
       $("featured-news").classList.remove("boom", "crash");
       $("message").classList.remove("event-alert", "boom", "crash");
     }
@@ -577,21 +573,12 @@ function connectToMarket() {
       if (typeof nextPrice === "number") company.price = nextPrice;
     });
 
-    const newsItems = [
-      `Live market update received — tick ${update.tick}.`,
-      "Prices are controlled by the shared server."
-    ];
-    $("news").replaceChildren(...newsItems.map(text => {
-      const item = document.createElement("li");
-      item.textContent = text;
-      return item;
-    }));
     render();
     renderLeaderboard();
   });
 
   socket.addEventListener("error", () => {
-    setMessage("Live market is unavailable. Start the Cloudflare dev server first.");
+    setMessage("Live market is unavailable. Refresh to reconnect.");
   });
 
   socket.addEventListener("close", () => {
@@ -700,7 +687,7 @@ let authMode = "register";
 $("auth-toggle").addEventListener("click", () => {
   authMode = authMode === "register" ? "login" : "register";
   $("auth-title").textContent = authMode === "register" ? "Create your account" : "Log in to Pocket Market";
-  $("auth-copy").textContent = authMode === "register" ? "Choose a unique name and password to enter the market." : "Use your existing market name and password.";
+  $("auth-copy").textContent = authMode === "register" ? "Pick a name and a password. No email, no real money." : "Use the name and password you signed up with.";
   $("auth-submit").textContent = authMode === "register" ? "Create account" : "Log in";
   $("auth-toggle").textContent = authMode === "register" ? "Already have an account? Log in" : "Need an account? Create one";
   $("password-input").autocomplete = authMode === "register" ? "new-password" : "current-password";

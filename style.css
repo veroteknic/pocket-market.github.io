@@ -42,15 +42,9 @@ body {
   font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
 }
 /*
-  CRT tube overlay, built as four independent layers:
-    1. .crt::before  scanlines + aperture grille
-    2. .crt::after   vignette + edge curvature + moiré
-    3. body::before  phosphor bloom
-    4. body::after   slow mains flicker (motion, gated below)
-
-  Technique: treat a CRT as stackable layers rather than one effect, keep the
-  scanline period on whole pixels so fractional device-pixel ratios do not
-  alias, and never ship motion without a reduced-motion fallback.
+  CRT tube overlay, drawn as independent layers so each can be tuned or
+  switched off alone. The scanline period stays on whole pixels so fractional
+  device-pixel ratios cannot alias, and the flicker motion is gated below.
 */
 .crt {
   position: fixed;
@@ -124,11 +118,9 @@ body[data-crt="off"]::after {
 }
 main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding: 26px; border: 2px solid var(--line-bright); border-radius: 8px; background: var(--paper); box-shadow: 0 8px 0 #4c351b, 0 16px 30px var(--surface-shadow); }
 .masthead { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; padding-bottom: 25px; border-bottom: 2px solid var(--ink); }
-.masthead h1 { margin-top: 8px; }
 .subtitle { margin: 10px 0 0; font-size: 16px; }
-.eyebrow-dot, .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); vertical-align: middle; }
 .live-badge { flex: 0 0 auto; padding: 8px 11px; border: 2px solid var(--line); border-radius: 4px; background: var(--white); color: var(--muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 2px 2px 0 var(--surface-shadow); }
-.live-dot { width: 7px; height: 7px; margin-right: 6px; background: var(--green); box-shadow: 0 0 0 3px rgba(98, 237, 172, 0.16); }
+.live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--green); vertical-align: middle; box-shadow: 0 0 0 3px rgba(98, 237, 172, 0.16); }
 .masthead-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .sound-toggle { padding: 4px 9px; border-color: var(--line-bright); background: transparent; color: var(--muted); box-shadow: none; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; }
 .sound-toggle:hover { border-color: var(--gold); color: var(--gold); }
@@ -140,14 +132,13 @@ main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding:
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(11, 9, 17, 0.98);
+  background: rgba(12, 11, 9, 0.98);
 }
 .identity-card { width: min(520px, 100%); border: 2px solid var(--line-bright); border-radius: 7px; padding: 32px; background: var(--white); box-shadow: 6px 6px 0 #4c351b; }
 .identity-card h1 { margin-bottom: 8px; }
 .identity-card form { display: flex; gap: 8px; margin-top: 22px; }
 .identity-card input { flex: 1; width: auto; }
 .form-error { min-height: 22px; color: var(--red); }
-.eyebrow { color: var(--muted); font: 11px/1 "Segoe UI", Arial, sans-serif; letter-spacing: 2px; }
 [hidden] { display: none !important; }
 #dev-console {
   position: fixed;
@@ -164,7 +155,7 @@ main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding:
   box-shadow: 4px 4px 0 var(--surface-shadow);
 }
 /* The dashboard is fixed, so reserve its column instead of covering the
-   leaderboard and tape underneath it. */
+   leaderboard and news cards underneath it. */
 body.dev-open { padding-right: 424px; }
 @media (max-width: 900px) {
   body.dev-open { padding-right: 20px; }
@@ -215,7 +206,6 @@ p { color: var(--muted); }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 12px; }
 .compact-heading { align-items: center; }
 .section-heading h2 { margin: 0; }
-.section-kicker { margin: 0 0 5px; color: var(--gold); font-size: 10px; font-weight: 700; letter-spacing: 1.8px; }
 .section-note { color: var(--muted); font-size: 12px; }
 table { width: 100%; border-collapse: collapse; margin: 0 0 18px; background: var(--white); border: 2px solid var(--line); }
 th {
@@ -293,23 +283,20 @@ section { margin-top: 20px; }
 #price-chart { display: block; width: 100%; height: auto; margin-top: 12px; background: var(--white); border: 1px solid var(--line); }
 .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px; }
 .lower-grid section { margin-top: 0; padding: 18px; border: 2px solid var(--line); border-radius: 5px; background: var(--white); box-shadow: 3px 3px 0 var(--surface-shadow); }
+.lower-grid section > h2 { margin-top: 0; }
 .featured-news { margin: 12px 0 14px; padding: 16px; border-left: 4px solid var(--gold); background: var(--white); }
 .featured-news.boom { border-left-color: var(--green); }
 .featured-news.crash { border-left-color: var(--red); }
-.news-kind { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: 1.5px; }
-.featured-news h3 { margin: 8px 0 4px; font: 700 19px/1.2 Georgia, serif; }
+.featured-news h3 { margin: 0 0 4px; font: 700 17px/1.25 Georgia, serif; }
 .featured-news p { margin: 0; font-size: 13px; }
-.news-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
 .daily-recap { margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--line); }
-.daily-recap .section-kicker { margin-bottom: 4px; }
 .daily-recap p:last-child { margin: 0; color: var(--ink); font-size: 13px; }
 
 /*
   Screenshake: three magnitudes rather than one, so a routine trade feels
   different from a crash. Small impulses are translation only; medium and
   large add a fraction of a degree of rotation, which is what makes the motion
-  read as force instead of a rendering glitch. The shell is shaken, never the
-  fixed gate or dev console, and the class is cleared on a timer.
+  read as force instead of a rendering glitch.
 */
 @keyframes shell-shake-sm {
   0%, 100% { transform: translate(0, 0) rotate(0); }
