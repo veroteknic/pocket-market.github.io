@@ -1,20 +1,20 @@
 :root {
-  /* Midnight arcade: violet structure, warm readable type, neon signals. */
-  --void: #0b0911;
-  --paper: #17121f;
-  --paper-deep: #21192d;
-  --white: #2a2138;
-  --ink: #fff1d2;
-  --muted: #c5b3ca;
-  --line: #665478;
-  --line-bright: #9b7fc0;
-  --violet: #b68cff;
+  /* Midnight arcade: near-black, brass structure, crimson and cyan signals. */
+  --void: #0c0b09;
+  --paper: #191611;
+  --paper-deep: #241f16;
+  --white: #2c261b;
+  --ink: #fff0cc;
+  --muted: #c8b897;
+  --line: #75603d;
+  --line-bright: #d4a14f;
+  --accent: #e8554f;
   --cyan: #65dff1;
   --green: #62edac;
   --red: #ff5c7d;
   --gold: #ffc95c;
-  --shadow: #08060d;
-  --surface-shadow: rgba(8, 6, 13, 0.62);
+  --shadow: #070604;
+  --surface-shadow: rgba(7, 6, 4, 0.65);
 
   /*
     CRT switchboard. Every layer is separate so each can be judged on its own.
@@ -83,7 +83,7 @@ body {
   opacity: var(--crt-vignette);
   background-image:
     radial-gradient(120% 92% at 50% 50%, transparent 56%, rgba(0, 0, 0, 0.78) 100%),
-    repeating-radial-gradient(circle at 28% 18%, rgba(255, 0, 170, 0.05) 0 1px, transparent 1px 6px);
+    repeating-radial-gradient(circle at 28% 18%, rgba(255, 201, 92, 0.045) 0 1px, transparent 1px 6px);
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.55), inset 0 0 240px rgba(0, 0, 0, 0.4);
 }
 body::before {
@@ -95,8 +95,8 @@ body::before {
   opacity: var(--crt-bloom);
   mix-blend-mode: screen;
   background-image:
-    radial-gradient(68% 52% at 50% -4%, rgba(182, 140, 255, 0.24), transparent 68%),
-    radial-gradient(58% 46% at 88% 102%, rgba(255, 92, 125, 0.16), transparent 70%),
+    radial-gradient(68% 52% at 50% -4%, rgba(255, 201, 92, 0.18), transparent 68%),
+    radial-gradient(58% 46% at 88% 102%, rgba(232, 85, 79, 0.18), transparent 70%),
     radial-gradient(48% 40% at 6% 88%, rgba(101, 223, 241, 0.13), transparent 70%);
 }
 body::after {
@@ -122,7 +122,7 @@ body[data-crt="off"]::before,
 body[data-crt="off"]::after {
   display: none;
 }
-main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding: 26px; border: 2px solid var(--line-bright); border-radius: 8px; background: var(--paper); box-shadow: 0 8px 0 #382648, 0 16px 30px var(--surface-shadow); }
+main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding: 26px; border: 2px solid var(--line-bright); border-radius: 8px; background: var(--paper); box-shadow: 0 8px 0 #4c351b, 0 16px 30px var(--surface-shadow); }
 .masthead { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; padding-bottom: 25px; border-bottom: 2px solid var(--ink); }
 .masthead h1 { margin-top: 8px; }
 .subtitle { margin: 10px 0 0; font-size: 16px; }
@@ -138,7 +138,7 @@ main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding:
   padding: 20px;
   background: rgba(11, 9, 17, 0.98);
 }
-.identity-card { width: min(520px, 100%); border: 2px solid var(--line-bright); border-radius: 7px; padding: 32px; background: var(--white); box-shadow: 6px 6px 0 #382648; }
+.identity-card { width: min(520px, 100%); border: 2px solid var(--line-bright); border-radius: 7px; padding: 32px; background: var(--white); box-shadow: 6px 6px 0 #4c351b; }
 .identity-card h1 { margin-bottom: 8px; }
 .identity-card form { display: flex; gap: 8px; margin-top: 22px; }
 .identity-card input { flex: 1; width: auto; }
@@ -182,7 +182,7 @@ p { color: var(--muted); }
   border-radius: 12px;
   padding: 16px 18px;
   margin: 22px 0 18px;
-  background: rgba(36, 29, 44, 0.9);
+  background: rgba(44, 38, 27, 0.9);
   box-shadow: 3px 3px 0 var(--surface-shadow);
 }
 .status span, .status strong { margin-right: 26px; }
@@ -205,7 +205,7 @@ th {
   text-transform: uppercase;
 }
 td { border-bottom: 1px solid var(--line); padding: 14px 10px; text-align: left; }
-tbody tr:hover { background: rgba(182, 140, 255, 0.1); }
+tbody tr:hover { background: rgba(255, 201, 92, 0.09); }
 button, input, select { font: inherit; }
 button, select, input {
   border: 1px solid var(--line);
@@ -221,7 +221,7 @@ button {
   box-shadow: 0 2px 0 var(--surface-shadow);
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease, transform 90ms ease, box-shadow 90ms ease;
 }
-button:hover { background: var(--violet); color: #1a1025; border-color: var(--violet); transform: translateY(-1px); box-shadow: 0 3px 0 var(--surface-shadow); }
+button:hover { background: var(--accent); color: #fff7df; border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 3px 0 var(--surface-shadow); }
 button:active { transform: translateY(2px) scale(0.97); box-shadow: 0 0 0 var(--surface-shadow); }
 select:hover, input:hover { border-color: var(--gold); }
 [data-action="buy"] { border-color: var(--green); color: var(--green); --tap-color: var(--green); }
