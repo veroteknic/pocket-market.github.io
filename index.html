@@ -146,6 +146,14 @@
         <input id="dev-holding-quantity" type="number" min="0" max="10000" value="0" aria-label="Holding quantity">
         <button type="button" data-dev-action="holding">Set holding</button>
       </div>
+      <div class="dev-actions">
+        <button type="button" data-dev-action="reset">Reset my player</button>
+      </div>
+      <p class="dev-label">Account cleanup</p>
+      <div class="dev-actions">
+        <input id="dev-delete-name" type="text" maxlength="16" placeholder="Account name" aria-label="Account name to delete">
+        <button type="button" data-dev-action="delete">Delete account</button>
+      </div>
       <p id="dev-feedback" class="dev-feedback" aria-live="polite"></p>
     </div>
   </aside>

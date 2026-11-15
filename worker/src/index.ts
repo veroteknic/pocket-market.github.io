@@ -454,7 +454,7 @@ export class Market extends DurableObject {
     throw new Error("Unknown developer market control");
   }
 
-  async developerPlayerControl(token: string, action: string, payload: { cash?: number; ticker?: string; quantity?: number }) {
+  async developerPlayerControl(token: string, action: string, payload: { cash?: number; ticker?: string; quantity?: number; name?: string }) {
     const session = await this.sessionForToken(token);
     if (!session?.developer) throw new Error("Developer access required");
     const player = await this.getPlayer(session.playerId);
@@ -471,6 +471,25 @@ export class Market extends DurableObject {
       player.holdings[ticker] = payload.quantity!;
       // A test holding starts at current price, so developer setup does not fake P/L.
       player.costBasis[ticker] = roundMoney(market.prices[ticker] * payload.quantity!);
+    } else if (action === "reset") {
+      player.cash = 10000;
+      player.holdings = {};
+      player.costBasis = {};
+      player.realizedProfit = 0;
+    } else if (action === "delete") {
+      const targetName = (payload.name || "").trim().toLowerCase();
+      if (!targetName) throw new Error("Enter the account name to delete");
+      const record = await this.ctx.storage.get<UserRecord>(`user:${targetName}`);
+      if (!record) throw new Error("No account with that name");
+      // Deleting the signed-in account is allowed; it simply ends this session.
+      await this.ctx.storage.delete(`user:${targetName}`);
+      await this.ctx.storage.delete(`player:${record.playerId}`);
+      const sessions = await this.ctx.storage.list<SessionRecord | string>({ prefix: "session:" });
+      const staleSessions = [...sessions]
+        .filter(([, stored]) => (typeof stored === "string" ? stored : stored.playerId) === record.playerId)
+        .map(([key]) => key);
+      if (staleSessions.length) await this.ctx.storage.delete(staleSessions);
+      return { deleted: targetName, playerId: record.playerId };
     } else {
       throw new Error("Unknown developer player control");
     }
@@ -681,7 +700,7 @@ export default {
     if (url.pathname === "/api/dev/player" && request.method === "POST") {
       try {
         const token = sessionToken(request);
-        const body = await request.json() as { action?: string; cash?: number; ticker?: string; quantity?: number };
+        const body = await request.json() as { action?: string; cash?: number; ticker?: string; quantity?: number; name?: string };
         const market = env.MARKET.getByName("global-school-year-market-v12");
         const player = await market.developerPlayerControl(token, body.action || "", body);
         return Response.json(player, { headers: cors });

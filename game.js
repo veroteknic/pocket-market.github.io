@@ -567,6 +567,22 @@ $("dev-console").addEventListener("click", async event => {
       state.companies.forEach(company => { company.shares = player.holdings[company.ticker] || 0; });
       render();
       $("dev-feedback").textContent = "Test holding updated.";
+    } else if (button.dataset.devAction === "reset") {
+      const player = await developerRequest("/api/dev/player", { action: "reset" });
+      state.cash = player.cash;
+      playerStats.costBasis = {};
+      playerStats.realizedProfit = 0;
+      state.companies.forEach(company => { company.shares = 0; });
+      render();
+      $("dev-feedback").textContent = "Player reset to the starting balance.";
+    } else if (button.dataset.devAction === "delete") {
+      const name = $("dev-delete-name").value.trim();
+      if (!name) throw new Error("Enter an account name first.");
+      if (!confirm(`Delete the account "${name}" and its leaderboard entry?`)) return;
+      const result = await developerRequest("/api/dev/player", { action: "delete", name });
+      $("dev-delete-name").value = "";
+      renderLeaderboard();
+      $("dev-feedback").textContent = `Deleted ${result.deleted}.`;
     }
   } catch (error) {
     $("dev-feedback").textContent = error instanceof Error ? error.message : "Developer control rejected.";
