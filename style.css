@@ -271,6 +271,9 @@ section { margin-top: 20px; }
 .featured-news h3 { margin: 8px 0 4px; font: 700 19px/1.2 Georgia, serif; }
 .featured-news p { margin: 0; font-size: 13px; }
 .news-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+.daily-recap { margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--line); }
+.daily-recap .section-kicker { margin-bottom: 4px; }
+.daily-recap p:last-child { margin: 0; color: var(--ink); font-size: 13px; }
 
 /*
   Screenshake: three magnitudes rather than one, so a routine trade feels

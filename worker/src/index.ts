@@ -29,8 +29,43 @@ type PlayerState = {
 };
 type UserRecord = { playerId: string; passwordHash: string };
 type LeaderEntry = { name: string; score: number; rank: number; rankChange: number };
-type MarketEvent = { headline: string; kind: "boom" | "crash"; effect: number; expiresAt: number };
-type MarketState = { day: number; tick: number; updatedAt: number; prices: Prices; history: History; orderFlow: Partial<Record<keyof Prices, number>>; sentiment: number; event: MarketEvent | null };
+type MarketEvent = {
+  headline: string;
+  detail: string;
+  kind: "boom" | "crash";
+  effect: number;
+  expiresAt: number;
+  scope: "market" | "company";
+  ticker?: keyof Prices;
+};
+type DailyTracking = {
+  dateKey: string;
+  day: number;
+  openedAt: number;
+  opening: Prices;
+  high: Prices;
+  low: Prices;
+  sentimentHigh: number;
+  sentimentLow: number;
+  events: Array<Pick<MarketEvent, "headline" | "detail" | "kind" | "scope" | "ticker">>;
+};
+type DailySummary = DailyTracking & {
+  closedAt?: number;
+  closing: Prices;
+  biggestMover: keyof Prices;
+  inProgress: boolean;
+};
+type MarketState = {
+  day: number;
+  tick: number;
+  updatedAt: number;
+  prices: Prices;
+  history: History;
+  orderFlow: Partial<Record<keyof Prices, number>>;
+  sentiment: number;
+  event: MarketEvent | null;
+  daily: DailyTracking;
+};
 
 function makeHistory(prices: Prices, days: number): History {
   return {
@@ -46,6 +81,37 @@ function currentDayOfYear() {
   const start = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
   const elapsedDays = Math.floor((today.getTime() - start.getTime()) / 86400000);
   return Math.max(1, Math.min(MAX_DAYS, elapsedDays + 1));
+}
+
+function currentDateKey(date = new Date()) {
+  return `${date.getUTCFullYear()}-${String(currentDayOfYear()).padStart(3, "0")}`;
+}
+
+function pricesCopy(prices: Prices): Prices {
+  return { MTA: prices.MTA, PXP: prices.PXP, RMP: prices.RMP, CLD: prices.CLD };
+}
+
+function startDailyTracking(prices: Prices, sentiment: number, now = Date.now()): DailyTracking {
+  return {
+    dateKey: currentDateKey(new Date(now)),
+    day: currentDayOfYear(),
+    openedAt: now,
+    opening: pricesCopy(prices),
+    high: pricesCopy(prices),
+    low: pricesCopy(prices),
+    sentimentHigh: sentiment,
+    sentimentLow: sentiment,
+    events: [],
+  };
+}
+
+function dailySummary(daily: DailyTracking, closing: Prices, inProgress: boolean, closedAt?: number): DailySummary {
+  const biggestMover = (Object.keys(closing) as Array<keyof Prices>).reduce((winner, ticker) => {
+    const winnerChange = Math.abs((closing[winner] - daily.opening[winner]) / daily.opening[winner]);
+    const change = Math.abs((closing[ticker] - daily.opening[ticker]) / daily.opening[ticker]);
+    return change > winnerChange ? ticker : winner;
+  }, "MTA" as keyof Prices);
+  return { ...daily, closing: pricesCopy(closing), biggestMover, inProgress, ...(closedAt ? { closedAt } : {}) };
 }
 
 const textEncoder = new TextEncoder();
@@ -107,9 +173,20 @@ export class Market extends DurableObject {
 
     if (!market) {
       const day = currentDayOfYear();
-      market = { day, tick: 0, updatedAt: Date.now(), prices: startingPrices, history: makeHistory(startingPrices, day), orderFlow: {}, sentiment: 0, event: null };
+      const updatedAt = Date.now();
+      market = {
+        day,
+        tick: 0,
+        updatedAt,
+        prices: pricesCopy(startingPrices),
+        history: makeHistory(startingPrices, day),
+        orderFlow: {},
+        sentiment: 0,
+        event: null,
+        daily: startDailyTracking(startingPrices, 0, updatedAt),
+      };
       await this.ctx.storage.put("market", market);
-    } else if (!Number.isFinite(market.tick) || !Number.isFinite(market.updatedAt) || !market.history || !market.orderFlow || !Number.isFinite(market.sentiment)) {
+    } else if (!Number.isFinite(market.tick) || !Number.isFinite(market.updatedAt) || !market.history || !market.orderFlow || !Number.isFinite(market.sentiment) || !market.daily) {
       // Upgrade state created by the first version of the prototype.
       market = {
         ...market,
@@ -119,6 +196,7 @@ export class Market extends DurableObject {
         orderFlow: market.orderFlow || {},
         sentiment: Number.isFinite(market.sentiment) ? market.sentiment : 0,
         event: market.event || null,
+        daily: market.daily || startDailyTracking(market.prices, Number.isFinite(market.sentiment) ? market.sentiment : 0),
       };
       await this.ctx.storage.put("market", market);
     }
@@ -155,12 +233,11 @@ export class Market extends DurableObject {
     if (!event && Math.random() < 0.04) event = randomMarketEvent(updatedAt);
     const flow = Object.values(market.orderFlow || {}).reduce((sum, value) => sum + (value || 0), 0);
     const sentiment = Math.max(-100, Math.min(100, (market.sentiment || 0) * 0.96 + flow * 0.12 + (Math.random() * 6 - 3)));
-    const eventEffect = event?.effect || 0;
     const prices = {
-      MTA: movePriceWithPressure(market.prices.MTA, "MTA", market.orderFlow?.MTA || 0, sentiment, eventEffect),
-      PXP: movePriceWithPressure(market.prices.PXP, "PXP", market.orderFlow?.PXP || 0, sentiment, eventEffect),
-      RMP: movePriceWithPressure(market.prices.RMP, "RMP", market.orderFlow?.RMP || 0, sentiment, eventEffect),
-      CLD: movePriceWithPressure(market.prices.CLD, "CLD", market.orderFlow?.CLD || 0, sentiment, eventEffect),
+      MTA: movePriceWithPressure(market.prices.MTA, "MTA", market.orderFlow?.MTA || 0, sentiment, eventEffectFor(event, "MTA")),
+      PXP: movePriceWithPressure(market.prices.PXP, "PXP", market.orderFlow?.PXP || 0, sentiment, eventEffectFor(event, "PXP")),
+      RMP: movePriceWithPressure(market.prices.RMP, "RMP", market.orderFlow?.RMP || 0, sentiment, eventEffectFor(event, "RMP")),
+      CLD: movePriceWithPressure(market.prices.CLD, "CLD", market.orderFlow?.CLD || 0, sentiment, eventEffectFor(event, "CLD")),
     };
     const history = { ...market.history };
     (Object.keys(prices) as Array<keyof Prices>).forEach(ticker => {
@@ -169,8 +246,31 @@ export class Market extends DurableObject {
       points.push({ time: updatedAt, price: prices[ticker] });
       history[ticker] = points.slice(-365);
     });
+    let daily = market.daily;
+    const todayKey = currentDateKey(new Date(updatedAt));
+    if (daily.dateKey !== todayKey) {
+      // Only completed, real live-market days are persisted. No backfill.
+      await this.ctx.storage.put(`summary:${daily.dateKey}`, dailySummary(daily, market.prices, false, updatedAt));
+      daily = startDailyTracking(market.prices, sentiment, updatedAt);
+    }
+    (Object.keys(prices) as Array<keyof Prices>).forEach(ticker => {
+      daily.high[ticker] = Math.max(daily.high[ticker], prices[ticker]);
+      daily.low[ticker] = Math.min(daily.low[ticker], prices[ticker]);
+    });
+    daily.sentimentHigh = Math.max(daily.sentimentHigh, sentiment);
+    daily.sentimentLow = Math.min(daily.sentimentLow, sentiment);
+    if (event && (!market.event || market.event.expiresAt !== event.expiresAt)) {
+      daily.events = [...daily.events, {
+        headline: event.headline,
+        detail: event.detail,
+        kind: event.kind,
+        scope: event.scope,
+        ...(event.ticker ? { ticker: event.ticker } : {}),
+      }].slice(-8);
+    }
     const nextMarket = {
       ...market,
+      day: currentDayOfYear(),
       tick: nextTick,
       updatedAt,
       prices,
@@ -178,6 +278,7 @@ export class Market extends DurableObject {
       history,
       sentiment,
       event,
+      daily,
     };
     await this.ctx.storage.put("market", nextMarket);
     this.broadcast(nextMarket);
@@ -270,6 +371,15 @@ export class Market extends DurableObject {
     }));
   }
 
+  async getDailySummaries() {
+    const market = await this.getMarket();
+    const stored = await this.ctx.storage.list<DailySummary>({ prefix: "summary:", reverse: true, limit: 6 });
+    const summaries = [...stored.values()];
+    // The current day is a live partial recap, explicitly marked as such.
+    summaries.unshift(dailySummary(market.daily, market.prices, true));
+    return summaries.slice(0, 7);
+  }
+
   async trade(playerId: string, ticker: string, action: string, quantity: number) {
     if (!/^[a-zA-Z0-9_-]{3,64}$/.test(playerId)) throw new Error("Invalid player ID");
     if (!(ticker in startingPrices) || !["buy", "sell"].includes(action)) throw new Error("Invalid trade");
@@ -320,10 +430,45 @@ function roundMoney(value: number) {
 }
 
 function randomMarketEvent(now: number): MarketEvent {
-  const boom = Math.random() > 0.5;
-  return boom
-    ? { headline: "MARKET BOOM — traders are piling in!", kind: "boom", effect: 0.08, expiresAt: now + 15000 }
-    : { headline: "FLASH CRASH — panic selling detected!", kind: "crash", effect: -0.08, expiresAt: now + 15000 };
+  if (Math.random() < 0.3) {
+    const boom = Math.random() > 0.5;
+    return boom
+      ? {
+          headline: "MARKET BOOM — traders are piling in!",
+          detail: "Broad buying pressure is lifting every ticker.",
+          kind: "boom",
+          effect: 0.08,
+          expiresAt: now + TICK_MS,
+          scope: "market",
+        }
+      : {
+          headline: "FLASH CRASH — panic selling detected!",
+          detail: "A broad sell-off is hitting the entire board.",
+          kind: "crash",
+          effect: -0.08,
+          expiresAt: now + TICK_MS,
+          scope: "market",
+        };
+  }
+
+  const personalityEvent = companyEvents[Math.floor(Math.random() * companyEvents.length)];
+  return { ...personalityEvent, expiresAt: now + TICK_MS };
+}
+
+const companyEvents: Array<Omit<MarketEvent, "expiresAt">> = [
+  { ticker: "MTA", scope: "company", kind: "boom", effect: 0.11, headline: "MOON TACO GOES INTERSTELLAR", detail: "Its limited Meteor Melt taco sold out before lunch." },
+  { ticker: "MTA", scope: "company", kind: "crash", effect: -0.1, headline: "MOON TACO SAUCE SPILL", detail: "A neon queso leak closed three locations for cleanup." },
+  { ticker: "PXP", scope: "company", kind: "boom", effect: 0.14, headline: "PIXELPETS GOES VIRAL", detail: "A rare virtual pet is all over the school feed." },
+  { ticker: "PXP", scope: "company", kind: "crash", effect: -0.13, headline: "PIXELPETS SERVER NAP", detail: "Players cannot feed their pets after an update outage." },
+  { ticker: "RMP", scope: "company", kind: "boom", effect: 0.09, headline: "ROBOMOP NAILS THE DEMO", detail: "Its new mop cleaned the gym floor during halftime." },
+  { ticker: "RMP", scope: "company", kind: "crash", effect: -0.08, headline: "ROBOMOP ESCAPES STUDY HALL", detail: "A demo unit rolled away and soaked the library carpet." },
+  { ticker: "CLD", scope: "company", kind: "boom", effect: 0.16, headline: "CLOUDY SODA GETS THE COOL KID", detail: "A viral cafeteria review calls the new flavor legendary." },
+  { ticker: "CLD", scope: "company", kind: "crash", effect: -0.15, headline: "CLOUDY SODA MYSTERY FLAVOR", detail: "Nobody can identify the new purple-ish fizz. Sales wobble." },
+];
+
+function eventEffectFor(event: MarketEvent | null, ticker: keyof Prices) {
+  if (!event) return 0;
+  return event.scope === "market" || event.ticker === ticker ? event.effect : 0;
 }
 
 function movePriceWithPressure(price: number, ticker: keyof Prices, flow: number, sentiment = 0, eventEffect = 0) {
@@ -361,6 +506,11 @@ export default {
       const market = env.MARKET.getByName("global-school-year-market-v12");
       const state = await market.getMarket();
       return Response.json({ ...state, day: currentDayOfYear() }, { headers: cors });
+    }
+
+    if (url.pathname === "/api/market/summary" && request.method === "GET") {
+      const market = env.MARKET.getByName("global-school-year-market-v12");
+      return Response.json(await market.getDailySummaries(), { headers: cors });
     }
 
     if (url.pathname === "/api/player" && request.method === "GET") {

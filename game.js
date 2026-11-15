@@ -266,6 +266,34 @@ function drawChart() {
 
 function setMessage(text) { $("message").textContent = text; }
 
+function renderDailySummary(summary) {
+  if (!summary) return;
+  const ticker = summary.biggestMover || "MTA";
+  const opening = summary.opening?.[ticker];
+  const closing = summary.closing?.[ticker];
+  const move = Number.isFinite(opening) && Number.isFinite(closing) && opening
+    ? ((closing - opening) / opening) * 100
+    : 0;
+  const low = summary.low?.[ticker];
+  const high = summary.high?.[ticker];
+  const range = Number.isFinite(low) && Number.isFinite(high) ? ` Range: $${money(low)}–$${money(high)}.` : "";
+  const direction = move > 0 ? "up" : move < 0 ? "down" : "neutral";
+  const status = summary.inProgress ? "so far" : "closed";
+  $("daily-summary").className = direction;
+  $("daily-summary").textContent = `Day ${summary.day} ${status}: ${ticker} is the biggest mover (${move >= 0 ? "+" : ""}${move.toFixed(1)}%).${range}`;
+}
+
+async function loadDailySummary() {
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/market/summary`);
+    if (!response.ok) return;
+    const summaries = await response.json();
+    renderDailySummary(summaries[0]);
+  } catch {
+    // The live market and game continue normally if a recap is unavailable.
+  }
+}
+
 async function trade(index, action) {
   if (pendingTrade) return;
   const company = state.companies[index];
@@ -349,7 +377,7 @@ function connectToMarket() {
       }
       $("news-kind").textContent = update.event.kind === "boom" ? "MARKET BOOM" : "FLASH CRASH";
       $("news-headline").textContent = update.event.headline;
-      $("news-detail").textContent = "React quickly. This event is affecting the live market.";
+      $("news-detail").textContent = update.event.detail || "React quickly. This event is affecting the live market.";
       $("featured-news").classList.remove("boom", "crash");
       $("featured-news").classList.add(update.event.kind);
       $("message").textContent = update.event.headline;
@@ -424,6 +452,7 @@ async function renderLeaderboard() {
       item.append(player, detail);
       list.append(item);
     });
+    if (update.daily) renderDailySummary({ ...update.daily, closing: update.prices, inProgress: true });
   } catch {
     const list = $("leaderboard");
     list.replaceChildren();
@@ -454,6 +483,7 @@ $("name-form").addEventListener("submit", event => {
 newGame();
 connectToMarket();
 loadPlayer();
+loadDailySummary();
 
 if (savedPlayerName) $("name-input").value = savedPlayerName;
 
