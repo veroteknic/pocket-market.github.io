@@ -536,7 +536,6 @@ async function renderLeaderboard() {
       item.append(player, detail);
       list.append(item);
     });
-    if (update.daily) renderDailySummary({ ...update.daily, closing: update.prices, inProgress: true });
   } catch {
     const list = $("leaderboard");
     list.replaceChildren();
