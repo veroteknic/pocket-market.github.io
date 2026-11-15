@@ -65,6 +65,29 @@ function shake(intensity = "sm") {
   shakeCleanup = setTimeout(() => shell.classList.remove("shake-sm", "shake-md", "shake-lg"), 400);
 }
 
+// One-shot event punctuation: a short chromatic bloom on the news panel and on
+// the affected company row. The animation is cleared on a timer rather than
+// animationend so background tabs still return to a clean state.
+let punctuationCleanup = 0;
+function punctuate(event) {
+  if (reducedMotion.matches) return;
+  const targets = [$("featured-news")];
+  if (event.ticker) {
+    const row = document.querySelector(`#market tr[data-ticker="${event.ticker}"]`);
+    if (row) targets.push(row);
+  }
+  targets.forEach(target => {
+    target.classList.remove("event-flash");
+    target.dataset.flash = event.kind;
+    void target.offsetWidth;
+    target.classList.add("event-flash");
+  });
+  clearTimeout(punctuationCleanup);
+  punctuationCleanup = setTimeout(() => {
+    targets.forEach(target => target.classList.remove("event-flash"));
+  }, 520);
+}
+
 // Every button pokes back on pointer down, plus keyboard activation (which
 // arrives as a click with detail 0).
 function tap(button) {
@@ -215,7 +238,7 @@ function render() {
   setRollingMoney("total", state.cash + portfolio);
   setRollingMoney("profit-loss", totalProfitLoss(), true);
   $("market").innerHTML = state.companies.map((company, index) => `
-    <tr>
+    <tr data-ticker="${company.ticker}">
       <td><strong>${company.name}</strong> (${company.ticker})</td>
       <td>$${money(company.price)}</td>
       <td>${changeMarkup(priceChange(company.ticker, company.price))}</td>
@@ -447,6 +470,7 @@ function connectToMarket() {
       if (eventKey !== lastEventKey) {
         lastEventKey = eventKey;
         shake(Math.abs(update.event.effect || 0) >= 0.06 ? "lg" : "md");
+        punctuate(update.event);
       }
       $("news-kind").textContent = update.event.kind === "boom" ? "MARKET BOOM" : "FLASH CRASH";
       $("news-headline").textContent = update.event.headline;

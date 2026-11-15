@@ -291,7 +291,7 @@ section { margin-top: 20px; }
   different from a crash. Small impulses are translation only; medium and
   large add a fraction of a degree of rotation, which is what makes the motion
   read as force instead of a rendering glitch. The shell is shaken, never the
-  fixed gate or dev console, and the class is cleared on animationend.
+  fixed gate or dev console, and the class is cleared on a timer.
 */
 @keyframes shell-shake-sm {
   0%, 100% { transform: translate(0, 0) rotate(0); }
@@ -317,6 +317,25 @@ section { margin-top: 20px; }
 .shake-sm { animation: shell-shake-sm 170ms ease-out both; }
 .shake-md { animation: shell-shake-md 220ms ease-out both; }
 .shake-lg { animation: shell-shake-lg 300ms ease-out both; }
+/*
+  Event punctuation. A company or market event flashes the news panel and the
+  affected row once: a short bloom with split red/mint text shadows, the same
+  chromatic-aberration cue CRT shaders use to sell a signal spike.
+*/
+.event-flash[data-flash="boom"] { --flash-a: var(--green); --flash-b: var(--gold); }
+.event-flash[data-flash="crash"] { --flash-a: var(--red); --flash-b: var(--accent); }
+@keyframes event-aberration {
+  0% { text-shadow: -3px 0 var(--flash-a), 3px 0 var(--flash-b); }
+  45% { text-shadow: -1.5px 0 var(--flash-a), 1.5px 0 var(--flash-b); }
+  100% { text-shadow: none; }
+}
+@keyframes event-bloom {
+  0% { filter: brightness(2.05) saturate(1.45); }
+  45% { filter: brightness(1.3) saturate(1.15); }
+  100% { filter: none; }
+}
+.event-flash { animation: event-aberration 460ms ease-out; }
+.featured-news.event-flash { animation: event-aberration 460ms ease-out, event-bloom 460ms ease-out; }
 ol { padding-left: 25px; }
 li { margin: 4px 0; }
 small { color: var(--muted); }
@@ -345,5 +364,5 @@ small { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   body::after { animation: none; opacity: 0; }
   button:hover, button:active { transform: none; }
-  .shake-sm, .shake-md, .shake-lg, button.tap, .number-roll { animation: none !important; }
+  .shake-sm, .shake-md, .shake-lg, button.tap, .number-roll, .event-flash { animation: none !important; }
 }
