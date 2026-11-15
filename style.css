@@ -192,7 +192,9 @@ p { color: var(--muted); }
 }
 .status span, .status strong { margin-right: 26px; }
 .status span { color: var(--muted); }
-.status span span { color: var(--ink); margin: 0; font-variant-numeric: tabular-nums; }
+.status span span:not(.up):not(.down) { color: var(--ink); margin: 0; font-variant-numeric: tabular-nums; }
+.status span span.up { color: var(--green); margin: 0; font-variant-numeric: tabular-nums; }
+.status span span.down { color: var(--red); margin: 0; font-variant-numeric: tabular-nums; }
 .market-section { margin-top: 30px; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 12px; }
 .compact-heading { align-items: center; }
