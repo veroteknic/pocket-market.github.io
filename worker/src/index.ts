@@ -29,6 +29,8 @@ type PlayerState = {
 };
 type UserRecord = { playerId: string; passwordHash: string };
 type LeaderEntry = { name: string; score: number; rank: number; rankChange: number };
+type DailyRanks = Record<string, { rank: number; rankChange: number }>;
+type StoredDailyRanks = DailyRanks | Record<string, number>;
 type MarketEvent = {
   headline: string;
   detail: string;
@@ -356,18 +358,36 @@ export class Market extends DurableObject {
 
   async getLeaderboard(market: MarketState): Promise<LeaderEntry[]> {
     const players = await this.ctx.storage.list<PlayerState>({ prefix: "player:" });
-    const entries: Array<{ name: string; score: number }> = [];
+    const entries: Array<{ playerId: string; name: string; score: number }> = [];
     for (const [key, player] of players) {
       const score = Math.round(player.cash + Object.entries(player.holdings).reduce((total, [ticker, shares]) => total + (market.prices[ticker as keyof Prices] * (shares || 0)), 0));
-      entries.push({ name: player.name || "Anonymous", score });
+      entries.push({ playerId: key.slice("player:".length), name: player.name || "Anonymous", score });
     }
     entries.sort((a, b) => b.score - a.score);
+    const rankKey = `ranks:${market.daily.dateKey}`;
+    const previousRanks = (await this.ctx.storage.get<StoredDailyRanks>(rankKey)) || {};
+    const currentRanks: DailyRanks = {};
+    entries.forEach((entry, index) => {
+      const rank = index + 1;
+      const previous = previousRanks[entry.playerId];
+      const previousRank = typeof previous === "number" ? previous : previous?.rank;
+      currentRanks[entry.playerId] = {
+        rank,
+        // Keep the last movement visible until this player moves again.
+        rankChange: previousRank && previousRank !== rank
+          ? previousRank - rank
+          : (typeof previous === "object" ? previous.rankChange : 0),
+      };
+    });
+    if (JSON.stringify(previousRanks) !== JSON.stringify(currentRanks)) {
+      await this.ctx.storage.put(rankKey, currentRanks);
+    }
     return entries.slice(0, 10).map((entry, index) => ({
       name: entry.name,
       score: entry.score,
       rank: index + 1,
-      // Rank movement is intentionally omitted from storage-heavy updates.
-      rankChange: 0,
+      // A lower rank number is better, so a positive change means climbing.
+      rankChange: currentRanks[entry.playerId].rankChange,
     }));
   }
 

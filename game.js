@@ -36,6 +36,8 @@ let marketHistory = {};
 let pendingTrade = null;
 let lastEventKey = "";
 let playerStats = { costBasis: {}, realizedProfit: 0 };
+const hudValues = new Map();
+const hudFrames = new Map();
 const $ = (id) => document.getElementById(id);
 const money = (value) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -135,12 +137,49 @@ function changeMarkup(change) {
   return `<span class="change ${direction}">${amountSign}${money(Math.abs(change.amount))} (${percentSign}${change.percent.toFixed(2)}%)</span>`;
 }
 
+function setRollingMoney(id, target, profit = false) {
+  const element = $(id);
+  const previous = hudValues.get(id);
+  if (!Number.isFinite(previous) || reducedMotion.matches) {
+    hudValues.set(id, target);
+    element.textContent = profit ? `${target > 0 ? "+$" : target < 0 ? "-$" : "$"}${money(Math.abs(target))}` : money(target);
+    if (profit) element.className = target > 0 ? "up" : target < 0 ? "down" : "neutral";
+    return;
+  }
+  if (previous === target) return;
+
+  cancelAnimationFrame(hudFrames.get(id));
+  const startedAt = performance.now();
+  const duration = Math.min(520, Math.max(220, Math.abs(target - previous) * 1.6));
+  element.classList.remove("number-roll");
+  void element.offsetWidth;
+  element.classList.add("number-roll");
+
+  const update = now => {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    // Ease out like a slot counter settling, without overshooting fake values.
+    const eased = 1 - Math.pow(1 - progress, 4);
+    const value = previous + (target - previous) * eased;
+    element.textContent = profit ? `${value > 0 ? "+$" : value < 0 ? "-$" : "$"}${money(Math.abs(value))}` : money(value);
+    if (profit) element.className = `${value > 0 ? "up" : value < 0 ? "down" : "neutral"} number-roll`;
+    if (progress < 1) {
+      hudFrames.set(id, requestAnimationFrame(update));
+    } else {
+      hudValues.set(id, target);
+      element.classList.remove("number-roll");
+      if (profit) element.className = target > 0 ? "up" : target < 0 ? "down" : "neutral";
+    }
+  };
+  hudFrames.set(id, requestAnimationFrame(update));
+}
+
 function render() {
   $("day").textContent = state.day;
-  $("cash").textContent = money(state.cash);
-  $("portfolio").textContent = money(portfolioValue());
-  $("total").textContent = money(state.cash + portfolioValue());
-  $("profit-loss").innerHTML = profitMarkup(totalProfitLoss());
+  const portfolio = portfolioValue();
+  setRollingMoney("cash", state.cash);
+  setRollingMoney("portfolio", portfolio);
+  setRollingMoney("total", state.cash + portfolio);
+  setRollingMoney("profit-loss", totalProfitLoss(), true);
   $("market").innerHTML = state.companies.map((company, index) => `
     <tr>
       <td><strong>${company.name}</strong> (${company.ticker})</td>
@@ -415,19 +454,6 @@ function connectToMarket() {
   socket.addEventListener("close", () => {
     if (!state.finished) setMessage("Live market disconnected.");
   });
-}
-
-function finishGame() {
-  if (state.finished) return;
-  state.finished = true;
-  const total = state.cash + portfolioValue();
-  const name = getPlayerName();
-  const scores = JSON.parse(localStorage.getItem("pocket-market-scores") || "[]");
-  scores.push({ name, score: Math.round(total), date: new Date().toLocaleDateString() });
-  scores.sort((a, b) => b.score - a.score);
-  localStorage.setItem("pocket-market-scores", JSON.stringify(scores.slice(0, 10)));
-  setMessage(`Summer break! ${name} finished with $${money(total)}.`);
-  renderLeaderboard();
 }
 
 async function renderLeaderboard() {

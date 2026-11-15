@@ -245,6 +245,12 @@ input { width: 70px; }
 .up { color: var(--green); } .down { color: var(--red); }
 .change { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .change.neutral { color: var(--muted); }
+@keyframes number-roll {
+  0% { filter: brightness(1.35); transform: translateY(1px) scale(0.985); }
+  65% { filter: brightness(1.12); transform: translateY(-1px) scale(1.02); }
+  100% { filter: brightness(1); transform: translateY(0) scale(1); }
+}
+.number-roll { display: inline-block; animation: number-roll 180ms ease-out; }
 #message { min-height: 24px; margin: 8px 0; color: var(--muted); font-weight: 600; }
 .event-alert {
   display: block;
@@ -334,5 +340,5 @@ small { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   body::after { animation: none; opacity: 0; }
   button:hover, button:active { transform: none; }
-  .shake-sm, .shake-md, .shake-lg, button.tap { animation: none !important; }
+  .shake-sm, .shake-md, .shake-lg, button.tap, .number-roll { animation: none !important; }
 }
