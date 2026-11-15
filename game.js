@@ -174,13 +174,13 @@ function drawChart() {
   const plotHeight = height - top - bottom;
 
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#fbfaf6";
+  ctx.fillStyle = "#17121f";
   ctx.fillRect(0, 0, width, height);
 
   ctx.font = "11px Segoe UI, Arial, sans-serif";
   ctx.textBaseline = "middle";
-  ctx.strokeStyle = "#ded9ce";
-  ctx.fillStyle = "#7b8179";
+  ctx.strokeStyle = "#3b304b";
+  ctx.fillStyle = "#c5b3ca";
   ctx.lineWidth = 1;
   for (let index = 0; index <= 4; index += 1) {
     const y = top + (index / 4) * plotHeight;
@@ -189,7 +189,7 @@ function drawChart() {
     ctx.lineTo(width - right, y);
     ctx.stroke();
   }
-  ctx.strokeStyle = "#9d9a91";
+  ctx.strokeStyle = "#665478";
   ctx.beginPath();
   ctx.moveTo(left, top);
   ctx.lineTo(left, height - bottom);
@@ -197,7 +197,7 @@ function drawChart() {
   ctx.stroke();
 
   if (points.length < 2) {
-    ctx.fillStyle = "#7b8179";
+    ctx.fillStyle = "#c5b3ca";
     ctx.textAlign = "center";
     ctx.fillText("Waiting for live price history…", left + plotWidth / 2, top + plotHeight / 2);
     ctx.textAlign = "left";
@@ -214,7 +214,7 @@ function drawChart() {
   const xFor = index => left + (index / (points.length - 1)) * plotWidth;
   const yFor = price => top + (1 - (price - min) / range) * plotHeight;
 
-  ctx.fillStyle = "#7b8179";
+  ctx.fillStyle = "#c5b3ca";
   ctx.textAlign = "right";
   for (let index = 0; index <= 4; index += 1) {
     const value = max - (index / 4) * range;
@@ -229,7 +229,7 @@ function drawChart() {
 
   const last = points[points.length - 1];
   const first = points[0];
-  const trendColor = last.price >= first.price ? "#21634b" : "#a13e37";
+  const trendColor = last.price >= first.price ? "#62edac" : "#ff5c7d";
   const line = points.map((point, index) => ({ x: xFor(index), y: yFor(point.price) }));
 
   ctx.beginPath();
@@ -238,8 +238,8 @@ function drawChart() {
   ctx.lineTo(line[line.length - 1].x, height - bottom);
   ctx.closePath();
   const area = ctx.createLinearGradient(0, top, 0, height - bottom);
-  area.addColorStop(0, last.price >= first.price ? "rgba(33, 99, 75, 0.18)" : "rgba(161, 62, 55, 0.16)");
-  area.addColorStop(1, "rgba(251, 250, 246, 0)");
+  area.addColorStop(0, last.price >= first.price ? "rgba(98, 237, 172, 0.24)" : "rgba(255, 92, 125, 0.22)");
+  area.addColorStop(1, "rgba(23, 18, 31, 0)");
   ctx.fillStyle = area;
   ctx.fill();
 
@@ -256,7 +256,7 @@ function drawChart() {
   const endpoint = line[line.length - 1];
   ctx.beginPath();
   ctx.arc(endpoint.x, endpoint.y, 5, 0, Math.PI * 2);
-  ctx.fillStyle = "#fbfaf6";
+  ctx.fillStyle = "#17121f";
   ctx.fill();
   ctx.strokeStyle = trendColor;
   ctx.lineWidth = 3;
