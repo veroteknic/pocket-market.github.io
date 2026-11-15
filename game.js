@@ -107,7 +107,7 @@ document.addEventListener("click", event => {
 });
 
 // Short synthesized cues through the Web Audio API. No audio files, and the
-// context is only created after a user gesture, as autoplay rules require.
+// context is unlocked by the first real gesture, as autoplay rules require.
 const sound = {
   enabled: localStorage.getItem("pocket-market-sound") !== "off",
   context: null,
@@ -123,7 +123,19 @@ function audioContext() {
   return sound.context;
 }
 
-function tone(frequency, { end = frequency, duration = 0.12, type = "triangle", gain = 0.05, delay = 0 } = {}) {
+// Safari only treats audio as unlocked after a buffer has played during a
+// gesture. A one-sample buffer is inaudible and satisfies that requirement.
+function unlockAudio() {
+  if (!sound.enabled) return;
+  const context = audioContext();
+  if (!context) return;
+  const source = context.createBufferSource();
+  source.buffer = context.createBuffer(1, 1, context.sampleRate);
+  source.connect(context.destination);
+  source.start(0);
+}
+
+function tone(frequency, { end = frequency, duration = 0.12, type = "triangle", gain = 0.12, delay = 0 } = {}) {
   if (!sound.enabled) return;
   const context = audioContext();
   if (!context) return;
@@ -145,31 +157,35 @@ function tone(frequency, { end = frequency, duration = 0.12, type = "triangle", 
 function cue(name) {
   if (!sound.enabled || document.hidden) return;
   if (name === "buy") {
-    tone(440, { end: 660, duration: 0.1 });
-    tone(880, { duration: 0.08, gain: 0.035, delay: 0.07 });
+    tone(440, { end: 660, duration: 0.13, gain: 0.13 });
+    tone(880, { duration: 0.11, gain: 0.1, delay: 0.08 });
   } else if (name === "sell") {
-    tone(560, { end: 300, duration: 0.13 });
+    tone(560, { end: 300, duration: 0.16, gain: 0.12 });
   } else if (name === "boom") {
-    [523, 659, 784].forEach((frequency, index) => tone(frequency, { duration: 0.14, gain: 0.045, delay: index * 0.07 }));
+    [523, 659, 784].forEach((frequency, index) => tone(frequency, { duration: 0.16, gain: 0.1, delay: index * 0.075 }));
   } else if (name === "crash") {
-    [392, 311, 233].forEach((frequency, index) => tone(frequency, { duration: 0.16, type: "sawtooth", gain: 0.04, delay: index * 0.075 }));
+    [392, 311, 233].forEach((frequency, index) => tone(frequency, { duration: 0.18, type: "sawtooth", gain: 0.09, delay: index * 0.08 }));
   } else if (name === "reject") {
-    tone(150, { end: 105, duration: 0.16, type: "square", gain: 0.035 });
+    tone(150, { end: 105, duration: 0.18, type: "square", gain: 0.09 });
   }
 }
 
 function applySound(enabled, persist = true) {
   sound.enabled = enabled;
   $("sound-toggle").textContent = `Sound: ${enabled ? "on" : "off"}`;
-  $("sound-toggle").setAttribute("aria-pressed", String(!enabled));
+  $("sound-toggle").setAttribute("aria-pressed", String(enabled));
   if (persist) localStorage.setItem("pocket-market-sound", enabled ? "on" : "off");
 }
 applySound(sound.enabled, false);
 $("sound-toggle").addEventListener("click", () => {
   applySound(!sound.enabled);
-  if (sound.enabled) cue("buy");
+  if (sound.enabled) {
+    unlockAudio();
+    cue("buy");
+  }
 });
-document.addEventListener("pointerdown", () => { if (sound.enabled) audioContext(); }, { once: true });
+document.addEventListener("pointerdown", unlockAudio, { once: true });
+document.addEventListener("keydown", unlockAudio, { once: true });
 
 function newGame() {
   state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), finished: false };
@@ -466,6 +482,7 @@ async function loadDailySummary() {
 
 async function trade(index, action) {
   if (pendingTrade) return;
+  unlockAudio();
   const company = state.companies[index];
   const amount = Math.floor(Number($(`amount-${index}`).value));
   if (!Number.isFinite(amount) || amount < 1) {
