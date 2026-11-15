@@ -348,8 +348,15 @@ section { margin-top: 20px; }
   45% { filter: brightness(1.3) saturate(1.15); }
   100% { filter: none; }
 }
+/* The headline card drops in from the right edge as the new event lands, so
+   the text change reads as a delivery rather than a silent replacement. */
+@keyframes news-slide {
+  0% { opacity: 0.2; transform: translateX(26px); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0); }
+}
 .event-flash { animation: event-aberration 460ms ease-out; }
-.featured-news.event-flash { animation: event-aberration 460ms ease-out, event-bloom 460ms ease-out; }
+.featured-news.event-flash { animation: event-aberration 460ms ease-out, event-bloom 460ms ease-out, news-slide 320ms cubic-bezier(.2, .8, .2, 1); }
 ol { padding-left: 25px; }
 li { margin: 4px 0; }
 small { color: var(--muted); }
