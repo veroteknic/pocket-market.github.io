@@ -28,6 +28,7 @@ type PlayerState = {
   realizedProfit: number;
 };
 type UserRecord = { playerId: string; passwordHash: string };
+type SessionRecord = { playerId: string; developer?: boolean };
 type LeaderEntry = { name: string; score: number; rank: number; rankChange: number };
 type DailyRanks = Record<string, { rank: number; rankChange: number }>;
 type StoredDailyRanks = DailyRanks | Record<string, number>;
@@ -320,7 +321,7 @@ export class Market extends DurableObject {
     const token = crypto.randomUUID();
     await this.ctx.storage.put(`user:${normalized}`, { playerId, passwordHash });
     await this.ctx.storage.put(`player:${playerId}`, player);
-    await this.ctx.storage.put(`session:${token}`, playerId);
+    await this.ctx.storage.put(`session:${token}`, { playerId } satisfies SessionRecord);
     return { token, player };
   }
 
@@ -329,12 +330,30 @@ export class Market extends DurableObject {
     const record = await this.ctx.storage.get<UserRecord>(`user:${cleanName.toLowerCase()}`);
     if (!record || !(await verifyPassword(password, record.passwordHash))) throw new Error("Invalid name or password");
     const token = crypto.randomUUID();
-    await this.ctx.storage.put(`session:${token}`, record.playerId);
+    await this.ctx.storage.put(`session:${token}`, { playerId: record.playerId } satisfies SessionRecord);
     return { token, player: await this.getPlayer(record.playerId) };
   }
 
   async playerIdForSession(token: string) {
-    return token ? await this.ctx.storage.get<string>(`session:${token}`) : undefined;
+    const session = await this.sessionForToken(token);
+    return session?.playerId;
+  }
+
+  async isDeveloperSession(token: string) {
+    return Boolean((await this.sessionForToken(token))?.developer);
+  }
+
+  async authorizeDeveloperSession(token: string) {
+    const session = await this.sessionForToken(token);
+    if (!session) throw new Error("Not authenticated");
+    await this.ctx.storage.put(`session:${token}`, { ...session, developer: true });
+  }
+
+  private async sessionForToken(token: string): Promise<SessionRecord | undefined> {
+    if (!token) return undefined;
+    const stored = await this.ctx.storage.get<SessionRecord | string>(`session:${token}`);
+    // Seamlessly migrate cookies created before developer roles existed.
+    return typeof stored === "string" ? { playerId: stored } : stored;
   }
 
   async registerPlayer(playerId: string, name: string): Promise<PlayerState> {
@@ -398,6 +417,66 @@ export class Market extends DurableObject {
     // The current day is a live partial recap, explicitly marked as such.
     summaries.unshift(dailySummary(market.daily, market.prices, true));
     return summaries.slice(0, 7);
+  }
+
+  async developerMarketControl(token: string, action: string, payload: { kind?: string; ticker?: string; sentiment?: number }) {
+    if (!(await this.isDeveloperSession(token))) throw new Error("Developer access required");
+    const market = await this.getMarket();
+
+    if (action === "event") {
+      if (!["boom", "crash"].includes(payload.kind || "")) throw new Error("Invalid event kind");
+      const ticker = payload.ticker && payload.ticker in startingPrices ? payload.ticker as keyof Prices : undefined;
+      const kind = payload.kind as "boom" | "crash";
+      const effect = (kind === "boom" ? 1 : -1) * (ticker ? 0.14 : 0.08);
+      const event: MarketEvent = {
+        headline: ticker ? `DEV ${kind === "boom" ? "BOOM" : "CRASH"} — ${ticker}` : `DEV MARKET ${kind === "boom" ? "BOOM" : "CRASH"}`,
+        detail: ticker ? `Developer override affecting ${ticker} only.` : "Developer override affecting the entire market.",
+        kind,
+        effect,
+        expiresAt: Date.now() + TICK_MS,
+        scope: ticker ? "company" : "market",
+        ...(ticker ? { ticker } : {}),
+      };
+      const nextMarket = { ...market, event };
+      await this.ctx.storage.put("market", nextMarket);
+      this.broadcast(nextMarket);
+      return nextMarket;
+    }
+
+    if (action === "sentiment") {
+      if (!Number.isFinite(payload.sentiment) || Math.abs(payload.sentiment!) > 100) throw new Error("Sentiment must be between -100 and 100");
+      const nextMarket = { ...market, sentiment: Math.round(payload.sentiment!) };
+      await this.ctx.storage.put("market", nextMarket);
+      this.broadcast(nextMarket);
+      return nextMarket;
+    }
+
+    throw new Error("Unknown developer market control");
+  }
+
+  async developerPlayerControl(token: string, action: string, payload: { cash?: number; ticker?: string; quantity?: number }) {
+    const session = await this.sessionForToken(token);
+    if (!session?.developer) throw new Error("Developer access required");
+    const player = await this.getPlayer(session.playerId);
+    const market = await this.getMarket();
+
+    if (action === "cash") {
+      if (!Number.isFinite(payload.cash) || payload.cash! < 0 || payload.cash! > 1_000_000) throw new Error("Cash must be between 0 and 1,000,000");
+      player.cash = roundMoney(payload.cash!);
+    } else if (action === "holding") {
+      if (!payload.ticker || !(payload.ticker in startingPrices) || !Number.isInteger(payload.quantity) || payload.quantity! < 0 || payload.quantity! > 10_000) {
+        throw new Error("Invalid holding");
+      }
+      const ticker = payload.ticker as keyof Prices;
+      player.holdings[ticker] = payload.quantity!;
+      // A test holding starts at current price, so developer setup does not fake P/L.
+      player.costBasis[ticker] = roundMoney(market.prices[ticker] * payload.quantity!);
+    } else {
+      throw new Error("Unknown developer player control");
+    }
+
+    await this.ctx.storage.put(`player:${session.playerId}`, player);
+    return player;
   }
 
   async trade(playerId: string, ticker: string, action: string, quantity: number) {
@@ -510,6 +589,20 @@ function sessionCookie(token: string) {
   return `pm_session=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=2592000`;
 }
 
+async function secretsMatch(candidate: string, expected: string) {
+  const [candidateHash, expectedHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", textEncoder.encode(candidate)),
+    crypto.subtle.digest("SHA-256", textEncoder.encode(expected)),
+  ]);
+  const candidateBytes = new Uint8Array(candidateHash);
+  const expectedBytes = new Uint8Array(expectedHash);
+  let difference = candidateBytes.length ^ expectedBytes.length;
+  for (let index = 0; index < Math.max(candidateBytes.length, expectedBytes.length); index += 1) {
+    difference |= (candidateBytes[index] || 0) ^ (expectedBytes[index] || 0);
+  }
+  return difference === 0;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -553,6 +646,50 @@ export default {
       }
     }
 
+    if (url.pathname === "/api/dev/status" && request.method === "GET") {
+      const market = env.MARKET.getByName("global-school-year-market-v12");
+      return Response.json({ authorized: await market.isDeveloperSession(sessionToken(request)) }, { headers: cors });
+    }
+
+    if (url.pathname === "/api/dev/login" && request.method === "POST") {
+      try {
+        const token = sessionToken(request);
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        if (!(await market.playerIdForSession(token))) return Response.json({ error: "Not authenticated" }, { status: 401, headers: cors });
+        const body = await request.json() as { password?: string };
+        if (!env.DEV_PASSWORD) return Response.json({ error: "Developer sign-in is not configured on this server" }, { status: 503, headers: cors });
+        if (!await secretsMatch(body.password || "", env.DEV_PASSWORD)) return Response.json({ error: "Invalid developer password" }, { status: 403, headers: cors });
+        await market.authorizeDeveloperSession(token);
+        return Response.json({ authorized: true }, { headers: cors });
+      } catch {
+        return Response.json({ error: "Developer sign-in failed" }, { status: 400, headers: cors });
+      }
+    }
+
+    if (url.pathname === "/api/dev/market" && request.method === "POST") {
+      try {
+        const token = sessionToken(request);
+        const body = await request.json() as { action?: string; kind?: string; ticker?: string; sentiment?: number };
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        const result = await market.developerMarketControl(token, body.action || "", body);
+        return Response.json(result, { headers: cors });
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "Developer control rejected" }, { status: 403, headers: cors });
+      }
+    }
+
+    if (url.pathname === "/api/dev/player" && request.method === "POST") {
+      try {
+        const token = sessionToken(request);
+        const body = await request.json() as { action?: string; cash?: number; ticker?: string; quantity?: number };
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        const player = await market.developerPlayerControl(token, body.action || "", body);
+        return Response.json(player, { headers: cors });
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "Developer control rejected" }, { status: 403, headers: cors });
+      }
+    }
+
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
       const market = env.MARKET.getByName("global-school-year-market-v12");
       const state = await market.getMarket();
@@ -582,4 +719,4 @@ export default {
 
     return new Response("Pocket Market backend is online!");
   },
-} satisfies ExportedHandler<{ MARKET: DurableObjectNamespace<Market> }>;
+} satisfies ExportedHandler<{ MARKET: DurableObjectNamespace<Market>; DEV_PASSWORD: string }>;

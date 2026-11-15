@@ -5,7 +5,7 @@ const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws"
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
-const isDeveloper = () => getPlayerName().toLowerCase() === "veroteknik";
+const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
 
 function updateDevConsole(data) {
   if (!isDeveloper()) return;
@@ -135,6 +135,40 @@ function changeMarkup(change) {
   const amountSign = change.amount > 0 ? "+$" : change.amount < 0 ? "-$" : "$";
   const percentSign = change.percent > 0 ? "+" : "";
   return `<span class="change ${direction}">${amountSign}${money(Math.abs(change.amount))} (${percentSign}${change.percent.toFixed(2)}%)</span>`;
+}
+
+function setDeveloperControls(authorized) {
+  $("dev-auth").hidden = authorized;
+  $("dev-auth-error").hidden = authorized;
+  $("dev-controls").hidden = !authorized;
+  if (authorized) {
+    $("dev-auth-error").textContent = "";
+    $("dev-feedback").textContent = "Developer controls armed.";
+  }
+}
+
+async function loadDeveloperAccess() {
+  if (!isDeveloper()) return;
+  $("dev-console").hidden = false;
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/dev/status`, { credentials: "include" });
+    const status = await response.json();
+    setDeveloperControls(Boolean(response.ok && status.authorized));
+  } catch {
+    setDeveloperControls(false);
+  }
+}
+
+async function developerRequest(path, body) {
+  const response = await fetch(`${BACKEND_HTTP_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Developer control rejected");
+  return result;
 }
 
 function setRollingMoney(id, target, profit = false) {
@@ -382,7 +416,7 @@ async function loadPlayer() {
     playerStats.realizedProfit = player.realizedProfit || 0;
     state.companies.forEach(company => { company.shares = player.holdings[company.ticker] || 0; });
     $("identity-gate").hidden = true;
-    if (player.name.toLowerCase() === "veroteknic") $("dev-console").hidden = false;
+    loadDeveloperAccess();
     render();
   } catch {
     if (savedPlayerName) $("name-input").value = savedPlayerName;
@@ -493,6 +527,51 @@ $("market").addEventListener("click", event => {
   if (button) trade(Number(button.dataset.index), button.dataset.action);
 });
 $("chart-stock").addEventListener("change", drawChart);
+$("dev-auth").addEventListener("submit", async event => {
+  event.preventDefault();
+  try {
+    await developerRequest("/api/dev/login", { password: $("dev-password").value });
+    $("dev-password").value = "";
+    setDeveloperControls(true);
+  } catch (error) {
+    $("dev-auth-error").textContent = error instanceof Error ? error.message : "Developer sign-in failed.";
+  }
+});
+$("dev-console").addEventListener("click", async event => {
+  const button = event.target.closest("button");
+  if (!button?.dataset.devAction && !button?.dataset.devEvent) return;
+  try {
+    if (button.dataset.devEvent) {
+      await developerRequest("/api/dev/market", {
+        action: "event",
+        kind: button.dataset.devEvent,
+        ticker: $("dev-event-ticker").value || undefined,
+      });
+      $("dev-feedback").textContent = `${button.dataset.devEvent} sent to the live market.`;
+    } else if (button.dataset.devAction === "sentiment") {
+      await developerRequest("/api/dev/market", { action: "sentiment", sentiment: Number($("dev-sentiment").value) });
+      $("dev-feedback").textContent = "Sentiment updated.";
+    } else if (button.dataset.devAction === "cash") {
+      const player = await developerRequest("/api/dev/player", { action: "cash", cash: Number($("dev-cash").value) });
+      state.cash = player.cash;
+      render();
+      $("dev-feedback").textContent = "Test cash updated.";
+    } else if (button.dataset.devAction === "holding") {
+      const player = await developerRequest("/api/dev/player", {
+        action: "holding",
+        ticker: $("dev-holding-ticker").value,
+        quantity: Number($("dev-holding-quantity").value),
+      });
+      playerStats.costBasis = player.costBasis || {};
+      playerStats.realizedProfit = player.realizedProfit || 0;
+      state.companies.forEach(company => { company.shares = player.holdings[company.ticker] || 0; });
+      render();
+      $("dev-feedback").textContent = "Test holding updated.";
+    }
+  } catch (error) {
+    $("dev-feedback").textContent = error instanceof Error ? error.message : "Developer control rejected.";
+  }
+});
 let authMode = "register";
 $("auth-toggle").addEventListener("click", () => {
   authMode = authMode === "register" ? "login" : "register";
@@ -529,7 +608,7 @@ async function claimName(name, password) {
     localStorage.setItem("pocket-market-player-name", result.name);
     $("name-error").textContent = "";
     $("identity-gate").hidden = true;
-    if (isDeveloper()) $("dev-console").hidden = false;
+    loadDeveloperAccess();
     setMessage(`Welcome, ${result.name}.`);
   } catch {
     setMessage("Could not check that name. Try again.");

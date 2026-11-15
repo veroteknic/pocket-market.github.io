@@ -6,9 +6,10 @@ export default defineConfig({
 		name: "pocket-market-worker",
 		compatibilityDate: "2026-11-10",
 		entrypoint,
-		env: {
-			WORLD: bindings.text("World"),
-			MARKET: bindings.durableObject({
+			env: {
+				WORLD: bindings.text("World"),
+				DEV_PASSWORD: bindings.secret(),
+				MARKET: bindings.durableObject({
 				worker: "pocket-market-worker",
 				exportName: "Market",
 			}),
