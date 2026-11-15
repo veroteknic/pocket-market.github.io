@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-15-panel">
+  <link rel="stylesheet" href="style.css?v=2026-11-15-sound">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -29,7 +29,10 @@
         <h1>Pocket Market</h1>
         <p class="subtitle">A shared, fast-moving market for curious traders.</p>
       </div>
-      <div class="live-badge"><span class="live-dot"></span> Live market</div>
+      <div class="masthead-side">
+        <div class="live-badge"><span class="live-dot"></span> Live market</div>
+        <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="false">Sound: on</button>
+      </div>
     </header>
     <section class="status" aria-live="polite">
       <strong>Day <span id="day">1</span> / 365</strong>
@@ -162,6 +165,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-15-drawer"></script>
+  <script src="game.js?v=2026-11-15-sound"></script>
 </body>
 </html>

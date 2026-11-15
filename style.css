@@ -129,6 +129,10 @@ main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding:
 .eyebrow-dot, .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); vertical-align: middle; }
 .live-badge { flex: 0 0 auto; padding: 8px 11px; border: 2px solid var(--line); border-radius: 4px; background: var(--white); color: var(--muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 2px 2px 0 var(--surface-shadow); }
 .live-dot { width: 7px; height: 7px; margin-right: 6px; background: var(--green); box-shadow: 0 0 0 3px rgba(98, 237, 172, 0.16); }
+.masthead-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.sound-toggle { padding: 4px 9px; border-color: var(--line-bright); background: transparent; color: var(--muted); box-shadow: none; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; }
+.sound-toggle:hover { border-color: var(--gold); color: var(--gold); }
+.sound-toggle[aria-pressed="true"] { border-color: var(--red); color: var(--red); }
 .identity-gate {
   position: fixed;
   inset: 0;
@@ -364,6 +368,8 @@ small { color: var(--muted); }
   body { padding: 28px 12px 44px; }
   .masthead { align-items: flex-start; flex-direction: column; gap: 14px; }
   .live-badge { align-self: stretch; text-align: center; }
+  .masthead-side { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+  .sound-toggle { padding: 6px 9px; }
   h1 { font-size: 29px; }
   table { display: block; overflow-x: auto; white-space: nowrap; }
   th, td { padding: 9px 5px; font-size: 14px; }

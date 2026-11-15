@@ -107,6 +107,72 @@ document.addEventListener("click", event => {
   if (button && !button.disabled) tap(button);
 });
 
+// Short synthesized cues through the Web Audio API. No audio files, and the
+// context is only created after a user gesture, as autoplay rules require.
+const sound = {
+  enabled: localStorage.getItem("pocket-market-sound") !== "off",
+  context: null,
+};
+
+function audioContext() {
+  if (!sound.context) {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return null;
+    sound.context = new AudioCtor();
+  }
+  if (sound.context.state === "suspended") sound.context.resume();
+  return sound.context;
+}
+
+function tone(frequency, { end = frequency, duration = 0.12, type = "triangle", gain = 0.05, delay = 0 } = {}) {
+  if (!sound.enabled) return;
+  const context = audioContext();
+  if (!context) return;
+  const start = context.currentTime + delay;
+  const oscillator = context.createOscillator();
+  const amp = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+  // Exponential ramps cannot reach zero, so both ends sit just above silence.
+  oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, end), start + duration);
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(gain, start + 0.012);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  oscillator.connect(amp).connect(context.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.03);
+}
+
+function cue(name) {
+  if (!sound.enabled || document.hidden) return;
+  if (name === "buy") {
+    tone(440, { end: 660, duration: 0.1 });
+    tone(880, { duration: 0.08, gain: 0.035, delay: 0.07 });
+  } else if (name === "sell") {
+    tone(560, { end: 300, duration: 0.13 });
+  } else if (name === "boom") {
+    [523, 659, 784].forEach((frequency, index) => tone(frequency, { duration: 0.14, gain: 0.045, delay: index * 0.07 }));
+  } else if (name === "crash") {
+    [392, 311, 233].forEach((frequency, index) => tone(frequency, { duration: 0.16, type: "sawtooth", gain: 0.04, delay: index * 0.075 }));
+  } else if (name === "reject") {
+    tone(150, { end: 105, duration: 0.16, type: "square", gain: 0.035 });
+  }
+}
+
+function applySound(enabled, persist = true) {
+  sound.enabled = enabled;
+  $("sound-toggle").textContent = `Sound: ${enabled ? "on" : "off"}`;
+  $("sound-toggle").setAttribute("aria-pressed", String(!enabled));
+  if (persist) localStorage.setItem("pocket-market-sound", enabled ? "on" : "off");
+}
+applySound(sound.enabled, false);
+$("sound-toggle").addEventListener("click", () => {
+  applySound(!sound.enabled);
+  // A short confirmation cue after unmuting, and none while muting.
+  if (sound.enabled) cue("buy");
+});
+document.addEventListener("pointerdown", () => { if (sound.enabled) audioContext(); }, { once: true });
+
 function newGame() {
   state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), finished: false };
   marketHistory = {};
@@ -404,7 +470,10 @@ async function trade(index, action) {
   if (pendingTrade) return;
   const company = state.companies[index];
   const amount = Math.floor(Number($(`amount-${index}`).value));
-  if (!Number.isFinite(amount) || amount < 1) return setMessage("Enter a whole number of shares.");
+  if (!Number.isFinite(amount) || amount < 1) {
+    cue("reject");
+    return setMessage("Enter a whole number of shares.");
+  }
 
   pendingTrade = { index, action };
   setMessage(`${action === "buy" ? "Buying" : "Selling"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name}…`);
@@ -419,15 +488,20 @@ async function trade(index, action) {
       body: JSON.stringify({ ticker: company.ticker, action, quantity: amount })
     });
     const result = await response.json();
-    if (!response.ok) return setMessage(result.error || "Trade rejected.");
+    if (!response.ok) {
+      cue("reject");
+      return setMessage(result.error || "Trade rejected.");
+    }
     state.cash = result.player.cash;
     playerStats.costBasis = result.player.costBasis || {};
     playerStats.realizedProfit = result.player.realizedProfit || 0;
     state.companies.forEach(item => { item.shares = result.player.holdings[item.ticker] || 0; });
     const realizedGain = (result.player.realizedProfit || 0) - realizedBefore;
     shake(Math.abs(realizedGain) >= 250 ? "md" : "sm");
+    cue(action === "buy" ? "buy" : "sell");
     setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}.`);
   } catch {
+    cue("reject");
     setMessage("Could not reach the live market server.");
   } finally {
     pendingTrade = null;
@@ -481,6 +555,7 @@ function connectToMarket() {
         lastEventKey = eventKey;
         shake(Math.abs(update.event.effect || 0) >= 0.06 ? "lg" : "md");
         punctuate(update.event);
+        cue(update.event.kind === "boom" ? "boom" : "crash");
       }
       $("news-kind").textContent = update.event.kind === "boom" ? "MARKET BOOM" : "FLASH CRASH";
       $("news-headline").textContent = update.event.headline;
