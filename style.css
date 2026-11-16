@@ -320,6 +320,30 @@ section { margin-top: 20px; }
 .chart-panel { border: 2px solid var(--line); border-radius: 5px; padding: 18px; background: var(--white); box-shadow: 3px 3px 0 var(--surface-shadow); }
 .chart-panel label { color: var(--muted); font-size: 12px; }
 .chart-panel select { margin-left: 5px; padding: 6px 8px; }
+.chart-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.chart-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--white); }
+.chart-tab {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 7px 13px;
+  color: var(--muted);
+  font: 700 11px/1 "Segoe UI", Arial, sans-serif;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+.chart-tab + .chart-tab { border-left: 1px solid var(--line); }
+.chart-tab:hover {
+  background: rgba(255, 201, 92, 0.14);
+  border-color: transparent;
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+.chart-tab:active { transform: none; box-shadow: none; }
+.chart-tab[aria-pressed="true"] { background: var(--line-bright); color: #17130c; }
+.chart-tab[aria-pressed="true"]:hover { background: var(--gold); }
 #price-chart { display: block; width: 100%; height: auto; margin-top: 12px; background: var(--white); border: 1px solid var(--line); }
 .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px; }
 .lower-grid section { margin-top: 0; padding: 18px; border: 2px solid var(--line); border-radius: 5px; background: var(--white); box-shadow: 3px 3px 0 var(--surface-shadow); }
@@ -409,8 +433,9 @@ small { color: var(--muted); }
   .trade button { min-width: 62px; }
   #price-chart { min-height: 190px; }
   .section-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
-  .compact-heading { flex-direction: row; align-items: center; }
-  .compact-heading label { margin-left: auto; }
+  .compact-heading { flex-direction: column; align-items: stretch; gap: 10px; }
+  .compact-heading label { margin-left: 0; }
+  .chart-controls { justify-content: space-between; }
   .lower-grid { grid-template-columns: 1fr; gap: 0; }
   .crt { border-radius: 14px; }
 }

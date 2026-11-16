@@ -12,6 +12,10 @@ never backfilled. Every order fills with slippage and pushes the shared tape in
 the trade's direction, so large trades move the price against you and everyone
 else sees the move immediately.
 
+Charts offer Day, Week and All ranges. The server keeps full-resolution points
+for the newest 720 ticks and thins older points as the record grows, so long
+ranges stay complete without unbounded storage or oversized live updates.
+
 ## Layout
 
 - `index.html` — game markup, account gate, developer console

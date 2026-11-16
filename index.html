@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-16-tape">
+  <link rel="stylesheet" href="style.css?v=2026-11-16-range">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -63,12 +63,19 @@
     <section class="chart-panel">
       <div class="section-heading compact-heading">
         <h2>Price history</h2>
-        <label for="chart-stock">View <select id="chart-stock">
-          <option value="MTA">Moon Taco (MTA)</option>
-          <option value="PXP">PixelPets (PXP)</option>
-          <option value="RMP">RoboMop (RMP)</option>
-          <option value="CLD">Cloudy Soda (CLD)</option>
-        </select></label>
+        <div class="chart-controls">
+          <div class="chart-tabs" role="group" aria-label="Chart range">
+            <button type="button" class="chart-tab" data-range="day" aria-pressed="true">Day</button>
+            <button type="button" class="chart-tab" data-range="week" aria-pressed="false">Week</button>
+            <button type="button" class="chart-tab" data-range="all" aria-pressed="false">All</button>
+          </div>
+          <label for="chart-stock">View <select id="chart-stock">
+            <option value="MTA">Moon Taco (MTA)</option>
+            <option value="PXP">PixelPets (PXP)</option>
+            <option value="RMP">RoboMop (RMP)</option>
+            <option value="CLD">Cloudy Soda (CLD)</option>
+          </select></label>
+        </div>
       </div>
       <canvas id="price-chart" width="860" height="260" aria-label="Selected stock price history"></canvas>
     </section>
@@ -156,6 +163,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-16-tick"></script>
+  <script src="game.js?v=2026-11-16-range"></script>
 </body>
 </html>

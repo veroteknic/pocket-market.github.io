@@ -33,6 +33,8 @@ const companies = [
 
 let state;
 let marketHistory = {};
+const savedChartRange = localStorage.getItem("pocket-market-chart-range");
+let chartRange = ["day", "week", "all"].includes(savedChartRange) ? savedChartRange : "day";
 let pendingTrade = null;
 let lastEventKey = "";
 let playerStats = { costBasis: {}, realizedProfit: 0 };
@@ -380,11 +382,53 @@ function flashPrices(previous) {
   });
 }
 
+// Mirrors the server's thinning rule so a long-lived tab never keeps a bigger
+// series than the server does. Duplicate frames (a trade echoed back over the
+// socket) are ignored.
+const HISTORY_RECENT = 720;
+function appendPoint(ticker, time, price) {
+  const points = marketHistory[ticker] || (marketHistory[ticker] = []);
+  const last = points[points.length - 1];
+  if (last && (last.time >= time || (last.price === price && time - last.time < 10000))) return;
+  points.push({ time, price });
+  if (points.length > HISTORY_RECENT * 2) {
+    const recent = points.slice(-HISTORY_RECENT);
+    const older = points
+      .slice(0, points.length - HISTORY_RECENT)
+      .filter((_, index) => index % 2 === 0);
+    marketHistory[ticker] = [...older, ...recent];
+  }
+}
+
+// Day resets at UTC midnight to match the server's game day; Week is a trailing
+// seven days. Points carrying a day number instead of a timestamp are the old
+// seed marker, not real ticks, so they never reach the plot.
+function chartPoints(ticker) {
+  const points = (marketHistory[ticker] || []).filter(point => point.time > 1e12);
+  if (chartRange === "all") return points;
+  let cutoff = Date.now() - 7 * 86400000;
+  if (chartRange === "day") {
+    const now = new Date();
+    cutoff = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  }
+  return points.filter(point => point.time >= cutoff);
+}
+
+function setChartRange(range) {
+  if (!["day", "week", "all"].includes(range)) return;
+  chartRange = range;
+  localStorage.setItem("pocket-market-chart-range", range);
+  document.querySelectorAll(".chart-tab").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.range === range));
+  });
+  drawChart();
+}
+
 function drawChart() {
   const canvas = $("price-chart");
   if (!canvas) return;
   const ticker = $("chart-stock").value;
-  const points = marketHistory[ticker] || [];
+  const points = chartPoints(ticker);
   const ctx = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
@@ -421,7 +465,7 @@ function drawChart() {
   if (points.length < 2) {
     ctx.fillStyle = "#c8b897";
     ctx.textAlign = "center";
-    ctx.fillText("Waiting for live price history…", left + plotWidth / 2, top + plotHeight / 2);
+    ctx.fillText("Waiting for ticks in this range…", left + plotWidth / 2, top + plotHeight / 2);
     ctx.textAlign = "left";
     return;
   }
@@ -433,7 +477,11 @@ function drawChart() {
   const min = Math.max(0, rawMin - rawRange * 0.12);
   const max = rawMax + rawRange * 0.12;
   const range = max - min || 1;
-  const xFor = index => left + (index / (points.length - 1)) * plotWidth;
+  // Space points by real time, not by array position, so a thinned older
+  // section still sits where it happened.
+  const firstTime = points[0].time;
+  const span = Math.max(1, points[points.length - 1].time - firstTime);
+  const xFor = point => left + ((point.time - firstTime) / span) * plotWidth;
   const yFor = price => top + (1 - (price - min) / range) * plotHeight;
 
   ctx.fillStyle = "#c8b897";
@@ -452,7 +500,7 @@ function drawChart() {
   const last = points[points.length - 1];
   const first = points[0];
   const trendColor = last.price >= first.price ? "#62edac" : "#ff5c7d";
-  const line = points.map((point, index) => ({ x: xFor(index), y: yFor(point.price) }));
+  const line = points.map(point => ({ x: xFor(point), y: yFor(point.price) }));
 
   ctx.beginPath();
   ctx.moveTo(line[0].x, height - bottom);
@@ -550,9 +598,7 @@ async function trade(index, action) {
     // Apply the fill to the tape immediately; the broadcast from the server
     // will confirm the same price a moment later.
     if (Number.isFinite(result.marketPrice)) {
-      const points = marketHistory[company.ticker];
-      const last = points && points[points.length - 1];
-      if (last && last.price !== result.marketPrice) points.push({ time: Date.now(), price: result.marketPrice });
+      appendPoint(company.ticker, Date.now(), result.marketPrice);
       state.companies[index].price = result.marketPrice;
     }
     const realizedGain = (result.player.realizedProfit || 0) - realizedBefore;
@@ -606,7 +652,15 @@ function connectToMarket() {
 
     // The backend owns the calendar; the browser only displays it.
     if (typeof update.day === "number") state.day = Math.max(state.day, update.day);
-    if (update.history) marketHistory = update.history;
+    if (update.history) {
+      marketHistory = update.history;
+    } else if (update.prices && typeof update.updatedAt === "number") {
+      // Live frames omit history to stay small; fold their prices into the
+      // local record instead of replacing it.
+      Object.entries(update.prices).forEach(([ticker, price]) => {
+        if (typeof price === "number") appendPoint(ticker, update.updatedAt, price);
+      });
+    }
     if (typeof update.sentiment === "number") {
       const mood = update.sentiment > 35 ? "Hype" : update.sentiment < -35 ? "Panic" : "Neutral";
       $("sentiment").textContent = `${mood} (${Math.round(update.sentiment)})`;
@@ -704,6 +758,10 @@ $("market").addEventListener("click", event => {
   if (button) trade(Number(button.dataset.index), button.dataset.action);
 });
 $("chart-stock").addEventListener("change", drawChart);
+document.querySelectorAll(".chart-tab").forEach(button => {
+  button.addEventListener("click", () => setChartRange(button.dataset.range));
+});
+setChartRange(chartRange);
 $("dev-auth").addEventListener("submit", async event => {
   event.preventDefault();
   try {

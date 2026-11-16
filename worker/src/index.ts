@@ -70,13 +70,28 @@ type MarketState = {
   daily: DailyTracking;
 };
 
-function makeHistory(prices: Prices, days: number): History {
+function makeHistory(prices: Prices, time = Date.now()): History {
   return {
-    MTA: [{ time: days, price: prices.MTA }],
-    PXP: [{ time: days, price: prices.PXP }],
-    RMP: [{ time: days, price: prices.RMP }],
-    CLD: [{ time: days, price: prices.CLD }],
+    MTA: [{ time, price: prices.MTA }],
+    PXP: [{ time, price: prices.PXP }],
+    RMP: [{ time, price: prices.RMP }],
+    CLD: [{ time, price: prices.CLD }],
   };
+}
+
+// History is thinned by halving the older part of the record, never by dropping
+// the far end. The newest 720 points keep full resolution, so the Day chart only
+// coarsens after several hours while Week and All still reach back across the
+// whole run at a steadily wider grain.
+const HISTORY_RECENT = 720;
+
+function appendHistory(points: HistoryPoint[], time: number, price: number): HistoryPoint[] {
+  const next = [...points, { time, price }];
+  if (next.length <= HISTORY_RECENT * 2) return next;
+  const recent = next.slice(-HISTORY_RECENT);
+  const older = next.slice(0, next.length - HISTORY_RECENT);
+  const thinned = older.filter((_, index) => index % 2 === 0);
+  return [...thinned, ...recent];
 }
 
 function currentDayOfYear() {
@@ -182,7 +197,7 @@ export class Market extends DurableObject {
         tick: 0,
         updatedAt,
         prices: pricesCopy(startingPrices),
-        history: makeHistory(startingPrices, day),
+        history: makeHistory(startingPrices, updatedAt),
         orderFlow: {},
         sentiment: 0,
         event: null,
@@ -195,7 +210,7 @@ export class Market extends DurableObject {
         ...market,
         tick: Number.isFinite(market.tick) ? market.tick : 0,
         updatedAt: Number.isFinite(market.updatedAt) ? market.updatedAt : Date.now(),
-        history: market.history || makeHistory(market.prices, currentDayOfYear()),
+        history: market.history || makeHistory(market.prices),
         orderFlow: market.orderFlow || {},
         sentiment: Number.isFinite(market.sentiment) ? market.sentiment : 0,
         event: market.event || null,
@@ -244,10 +259,8 @@ export class Market extends DurableObject {
     };
     const history = { ...market.history };
     (Object.keys(prices) as Array<keyof Prices>).forEach(ticker => {
-      const points = [...history[ticker]];
       // Keep genuine live ticks only; no synthetic backfill.
-      points.push({ time: updatedAt, price: prices[ticker] });
-      history[ticker] = points.slice(-365);
+      history[ticker] = appendHistory(market.history[ticker], updatedAt, prices[ticker]);
     });
     let daily = market.daily;
     const todayKey = currentDateKey(new Date(updatedAt));
@@ -533,14 +546,18 @@ export class Market extends DurableObject {
     }
 
     const flow = (market.orderFlow?.[symbol] || 0) + (action === "buy" ? quantity : -quantity);
+    const tradedAt = Date.now();
     const nextMarket: MarketState = {
       ...market,
+      // A fill is a market event too: it moves updatedAt so every client can
+      // place the trade on the tape without waiting for the next alarm.
+      updatedAt: tradedAt,
       prices: { ...market.prices, [symbol]: tapePrice },
       // The chart gets the trade as a real live point instead of waiting for
       // the next alarm, which is what makes a fill feel like it hit the tape.
       history: {
         ...market.history,
-        [symbol]: [...market.history[symbol], { time: Date.now(), price: tapePrice }].slice(-365),
+        [symbol]: appendHistory(market.history[symbol], tradedAt, tapePrice),
       },
       daily: {
         ...market.daily,
@@ -555,8 +572,12 @@ export class Market extends DurableObject {
     return { player, price: execution, marketPrice: tapePrice, impact, ticker: symbol, action, quantity };
   }
 
+  // Live updates carry prices, not the whole record. History only rides along on
+  // the opening snapshot, which keeps every tick message small no matter how
+  // much history the chart is holding.
   private broadcast(market: MarketState) {
-    const message = JSON.stringify({ type: "market_update", ...market });
+    const { history, ...live } = market;
+    const message = JSON.stringify({ type: "market_update", ...live });
     for (const socket of this.ctx.getWebSockets()) {
       try {
         socket.send(message);
