@@ -20,7 +20,7 @@
     CRT switchboard. Every layer is separate so each can be judged on its own.
     Set a value to 0 to switch that layer off. `--crt-curve` rounds the tube edge.
   */
-  --crt-scanlines: 0.16;
+  --crt-scanlines: 0.38;
   --crt-aperture: 0.5;
   --crt-vignette: 0.72;
   --crt-bloom: 0.3;
@@ -64,7 +64,7 @@ body {
 .crt::before {
   opacity: var(--crt-scanlines);
   background-image:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.62) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.72) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(
       90deg,
       rgba(255, 0, 82, calc(var(--crt-aperture) * 0.045)) 0 1px,
