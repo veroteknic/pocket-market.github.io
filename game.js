@@ -424,11 +424,30 @@ function setChartRange(range) {
   drawChart();
 }
 
+// A range should show that range, not stretch whatever data exists to fill the
+// panel. The plot is anchored to the window, so a young record sits at the
+// right edge of Week instead of pretending to cover seven days.
+function chartWindow(points) {
+  const end = Date.now();
+  if (chartRange === "week") return { start: end - 7 * 86400000, end };
+  if (chartRange === "day") {
+    const now = new Date();
+    return { start: Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()), end };
+  }
+  return { start: points.length ? points[0].time : end, end };
+}
+
+function chartAxisLabel(time) {
+  if (chartRange === "day") return "00:00 UTC";
+  return new Date(time).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 // The tab can look inert while the record is younger than the range, so the
 // chart states how much it is actually covering.
 function chartSpanNote(points) {
-  if (!points.length) return "No ticks in this range yet.";
-  if (points.length === 1) return "1 point so far.";
+  const label = chartRange === "day" ? "Day" : chartRange === "week" ? "Week" : "All";
+  if (!points.length) return `${label} · no ticks in this range yet.`;
+  if (points.length === 1) return `${label} · 1 point so far.`;
   const spanMs = points[points.length - 1].time - points[0].time;
   const minutes = spanMs / 60000;
   const span = minutes < 90
@@ -436,7 +455,7 @@ function chartSpanNote(points) {
     : spanMs < 48 * 3600000
       ? `${(spanMs / 3600000).toFixed(1)}h`
       : `${(spanMs / 86400000).toFixed(1)}d`;
-  return `${points.length} points · ${span}`;
+  return `${label} · ${points.length} points · ${span}`;
 }
 
 function drawChart() {
@@ -493,11 +512,11 @@ function drawChart() {
   const min = Math.max(0, rawMin - rawRange * 0.12);
   const max = rawMax + rawRange * 0.12;
   const range = max - min || 1;
-  // Space points by real time, not by array position, so a thinned older
-  // section still sits where it happened.
-  const firstTime = points[0].time;
-  const span = Math.max(1, points[points.length - 1].time - firstTime);
-  const xFor = point => left + ((point.time - firstTime) / span) * plotWidth;
+  // Space points by real time against the selected window, not by array
+  // position, so a thinned or young record lands where it happened.
+  const view = chartWindow(points);
+  const span = Math.max(1, view.end - view.start);
+  const xFor = point => left + Math.max(0, Math.min(1, (point.time - view.start) / span)) * plotWidth;
   const yFor = price => top + (1 - (price - min) / range) * plotHeight;
 
   ctx.fillStyle = "#c8b897";
@@ -509,9 +528,18 @@ function drawChart() {
   }
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("Older", left, height - 12);
+  ctx.fillText(chartAxisLabel(view.start), left, height - 12);
   ctx.textAlign = "right";
-  ctx.fillText("Latest", width - right, height - 12);
+  ctx.fillText("Now", width - right, height - 12);
+  ctx.textAlign = "left";
+
+  const coverage = (points[points.length - 1].time - points[0].time) / span;
+  if (coverage < 0.04) {
+    ctx.fillStyle = "#c8b897";
+    ctx.textAlign = "center";
+    ctx.fillText("History is younger than this range.", left + plotWidth / 2, top + plotHeight / 2);
+    ctx.textAlign = "left";
+  }
 
   const last = points[points.length - 1];
   const first = points[0];
