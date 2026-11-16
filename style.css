@@ -125,6 +125,32 @@ main { position: relative; z-index: 1; max-width: 1080px; margin: auto; padding:
 .sound-toggle { padding: 4px 9px; border-color: var(--line-bright); background: transparent; color: var(--muted); box-shadow: none; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; }
 .sound-toggle:hover { border-color: var(--gold); color: var(--gold); }
 .sound-toggle[aria-pressed="true"] { border-color: var(--red); color: var(--red); }
+/*
+  Tick meter: the bar drains toward the next server tick, then snaps back when
+  the update lands. Under three seconds it turns red and blinks, so the last
+  moment before a repricing is readable at a glance.
+*/
+.tick-strip { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; }
+.tick-meter { flex: 1; height: 7px; border: 1px solid var(--line); background: #0e0c08; overflow: hidden; }
+#tick-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--line-bright), var(--gold));
+  transition: width 160ms linear;
+}
+#tick-count {
+  flex: 0 0 auto;
+  min-width: 108px;
+  color: var(--muted);
+  text-align: right;
+  font: 700 11px/1 Consolas, "Courier New", monospace;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.tick-strip.urgent #tick-fill { background: var(--red); }
+.tick-strip.urgent #tick-count { color: var(--red); animation: tick-pulse 620ms ease-in-out infinite; }
+@keyframes tick-pulse { 50% { opacity: 0.4; } }
 .identity-gate {
   position: fixed;
   inset: 0;
@@ -258,6 +284,20 @@ input { width: 70px; }
 .up { color: var(--green); } .down { color: var(--red); }
 .change { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .change.neutral { color: var(--muted); }
+/*
+  Price flash: a repriced row paints its price cell green or red once, so the
+  board reads as moving even before the number is parsed.
+*/
+@keyframes price-flash-up {
+  0% { background: rgba(98, 237, 172, 0.3); }
+  100% { background: transparent; }
+}
+@keyframes price-flash-down {
+  0% { background: rgba(255, 92, 125, 0.3); }
+  100% { background: transparent; }
+}
+.price-up { animation: price-flash-up 700ms ease-out; }
+.price-down { animation: price-flash-down 700ms ease-out; }
 @keyframes number-roll {
   0% { filter: brightness(1.35); transform: translateY(1px) scale(0.985); }
   65% { filter: brightness(1.12); transform: translateY(-1px) scale(1.02); }
@@ -379,4 +419,6 @@ small { color: var(--muted); }
   body::after { animation: none; opacity: 0; }
   button:hover, button:active { transform: none; }
   .shake-sm, .shake-md, .shake-lg, button.tap, .number-roll, .event-flash { animation: none !important; }
+  #tick-fill { transition: none; }
+  .tick-strip.urgent #tick-count { animation: none; }
 }

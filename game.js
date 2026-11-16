@@ -1,5 +1,6 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
+const TICK_MS = 15000;
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -167,6 +168,10 @@ function cue(name) {
     [392, 311, 233].forEach((frequency, index) => tone(frequency, { duration: 0.18, type: "sawtooth", gain: 0.09, delay: index * 0.08 }));
   } else if (name === "reject") {
     tone(150, { end: 105, duration: 0.18, type: "square", gain: 0.09 });
+  } else if (name === "fill") {
+    // A fat order gets a low thud under the regular trade cue.
+    tone(170, { end: 118, duration: 0.17, type: "square", gain: 0.08 });
+    tone(520, { end: 380, duration: 0.05, gain: 0.06, delay: 0.01 });
   }
 }
 
@@ -188,7 +193,7 @@ document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
 
 function newGame() {
-  state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), finished: false };
+  state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), updatedAt: 0, clockSkew: null, finished: false };
   marketHistory = {};
   render();
   setMessage(`Live market: Day ${state.day} / ${MAX_DAYS}.`);
@@ -342,6 +347,37 @@ function render() {
       </td>
     </tr>`).join("");
   drawChart();
+}
+
+// The next repricing is the only timer in the game, so it gets its own strip.
+// Remaining time is derived from the server's last tick (with a one-time clock
+// skew offset) rather than counting down blindly from page load.
+function renderTickMeter() {
+  const strip = document.querySelector(".tick-strip");
+  if (!strip || !state) return;
+  const live = state.updatedAt > 0;
+  strip.hidden = !live;
+  if (!live) return;
+  const left = Math.max(0, state.updatedAt + TICK_MS - (Date.now() - (state.clockSkew || 0)));
+  const ratio = Math.min(1, Math.max(0, left / TICK_MS));
+  $("tick-fill").style.width = `${ratio * 100}%`;
+  $("tick-count").textContent = left > 0 ? `Move in ${(left / 1000).toFixed(1)}s` : "Moving…";
+  strip.classList.toggle("urgent", left <= 3000);
+}
+setInterval(renderTickMeter, 100);
+
+// Repaints a price cell once per move, including moves caused by another
+// player's order landing on the tape between ticks.
+function flashPrices(previous) {
+  state.companies.forEach((company, index) => {
+    const before = previous[index];
+    if (typeof before !== "number" || before === company.price) return;
+    const cell = document.querySelector(`#market tr[data-ticker="${company.ticker}"] td:nth-child(2)`);
+    if (!cell) return;
+    cell.classList.remove("price-up", "price-down");
+    void cell.offsetWidth;
+    cell.classList.add(company.price > before ? "price-up" : "price-down");
+  });
 }
 
 function drawChart() {
@@ -511,10 +547,21 @@ async function trade(index, action) {
     playerStats.costBasis = result.player.costBasis || {};
     playerStats.realizedProfit = result.player.realizedProfit || 0;
     state.companies.forEach(item => { item.shares = result.player.holdings[item.ticker] || 0; });
+    // Apply the fill to the tape immediately; the broadcast from the server
+    // will confirm the same price a moment later.
+    if (Number.isFinite(result.marketPrice)) {
+      const points = marketHistory[company.ticker];
+      const last = points && points[points.length - 1];
+      if (last && last.price !== result.marketPrice) points.push({ time: Date.now(), price: result.marketPrice });
+      state.companies[index].price = result.marketPrice;
+    }
     const realizedGain = (result.player.realizedProfit || 0) - realizedBefore;
-    shake(Math.abs(realizedGain) >= 250 ? "md" : "sm");
+    const heavy = Math.abs(result.impact || 0) >= 0.035 || Math.abs(realizedGain) >= 250;
+    shake(heavy ? "md" : "sm");
     cue(action === "buy" ? "buy" : "sell");
-    setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}.`);
+    if (heavy) cue("fill");
+    const slipped = Number.isFinite(result.marketPrice) && result.marketPrice !== result.price;
+    setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}${slipped ? ` · tape moved to $${money(result.marketPrice)}` : ""}.`);
   } catch {
     cue("reject");
     setMessage("Could not reach the live market server.");
@@ -585,12 +632,23 @@ function connectToMarket() {
       $("message").classList.remove("event-alert", "boom", "crash");
     }
 
+    const previousPrices = state.companies.map(company => company.price);
+    const hadLiveState = state.updatedAt > 0;
+    if (typeof update.updatedAt === "number") {
+      // One fixed offset keeps the tick strip honest even when the local clock
+      // is off; network latency on the first frame is a few milliseconds.
+      if (state.clockSkew == null) state.clockSkew = Date.now() - update.updatedAt;
+      state.updatedAt = update.updatedAt;
+    }
+
     state.companies.forEach(company => {
       const nextPrice = update.prices[company.ticker];
       if (typeof nextPrice === "number") company.price = nextPrice;
     });
 
     render();
+    renderTickMeter();
+    if (hadLiveState) flashPrices(previousPrices);
     renderLeaderboard();
   });
 
@@ -599,6 +657,8 @@ function connectToMarket() {
   });
 
   socket.addEventListener("close", () => {
+    state.updatedAt = 0;
+    renderTickMeter();
     if (!state.finished) setMessage("Live market disconnected.");
   });
 }

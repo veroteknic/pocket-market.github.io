@@ -233,7 +233,7 @@ export class Market extends DurableObject {
     const updatedAt = Date.now();
     let event = market.event;
     if (event && event.expiresAt <= updatedAt) event = null;
-    if (!event && Math.random() < 0.04) event = randomMarketEvent(updatedAt);
+    if (!event && Math.random() < 0.1) event = randomMarketEvent(updatedAt);
     const flow = Object.values(market.orderFlow || {}).reduce((sum, value) => sum + (value || 0), 0);
     const sentiment = Math.max(-100, Math.min(100, (market.sentiment || 0) * 0.96 + flow * 0.12 + (Math.random() * 6 - 3)));
     const prices = {
@@ -508,16 +508,24 @@ export class Market extends DurableObject {
     const player = await this.getPlayer(playerId);
     const owned = player.holdings[symbol] || 0;
     const costBasis = player.costBasis[symbol] || 0;
-    const total = market.prices[symbol] * quantity;
+    const quote = market.prices[symbol];
+    // Size has a price. The fill slips against you and the tape moves for
+    // everyone, so a big order costs real ground and smaller players can react
+    // to the wave it leaves behind.
+    const impact = Math.min(0.08, 0.0006 + quantity * 0.0007);
+    const direction = action === "buy" ? 1 : -1;
+    const execution = Math.max(0.01, roundMoney(quote * (1 + (direction * impact) / 2)));
+    const tapePrice = Math.max(1, roundMoney(quote * (1 + direction * impact)));
+    const total = execution * quantity;
 
     if (action === "buy") {
       if (player.cash < total) throw new Error("Not enough cash");
-      player.cash -= total;
+      player.cash = roundMoney(player.cash - total);
       player.holdings[symbol] = owned + quantity;
       player.costBasis[symbol] = roundMoney(costBasis + total);
     } else {
       if (owned < quantity) throw new Error("Not enough shares");
-      player.cash += total;
+      player.cash = roundMoney(player.cash + total);
       player.holdings[symbol] = owned - quantity;
       const averageCost = owned > 0 ? costBasis / owned : 0;
       player.costBasis[symbol] = roundMoney(Math.max(0, costBasis - averageCost * quantity));
@@ -525,10 +533,26 @@ export class Market extends DurableObject {
     }
 
     const flow = (market.orderFlow?.[symbol] || 0) + (action === "buy" ? quantity : -quantity);
-    const nextMarket = { ...market, orderFlow: { ...market.orderFlow, [symbol]: Math.max(-100, Math.min(100, flow)) } };
+    const nextMarket: MarketState = {
+      ...market,
+      prices: { ...market.prices, [symbol]: tapePrice },
+      // The chart gets the trade as a real live point instead of waiting for
+      // the next alarm, which is what makes a fill feel like it hit the tape.
+      history: {
+        ...market.history,
+        [symbol]: [...market.history[symbol], { time: Date.now(), price: tapePrice }].slice(-365),
+      },
+      daily: {
+        ...market.daily,
+        high: { ...market.daily.high, [symbol]: Math.max(market.daily.high[symbol], tapePrice) },
+        low: { ...market.daily.low, [symbol]: Math.min(market.daily.low[symbol], tapePrice) },
+      },
+      orderFlow: { ...market.orderFlow, [symbol]: Math.max(-100, Math.min(100, flow)) },
+    };
     await this.ctx.storage.put(`player:${playerId}`, player);
     await this.ctx.storage.put("market", nextMarket);
-    return { player, price: market.prices[symbol], ticker: symbol, action, quantity };
+    this.broadcast(nextMarket);
+    return { player, price: execution, marketPrice: tapePrice, impact, ticker: symbol, action, quantity };
   }
 
   private broadcast(market: MarketState) {

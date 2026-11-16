@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-16-scan">
+  <link rel="stylesheet" href="style.css?v=2026-11-16-tape">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -25,13 +25,17 @@
     <header class="masthead">
       <div>
         <h1>Pocket Market</h1>
-        <p class="subtitle">Four companies, one shared board, fake money. Prices tick every 15 seconds whether you trade or not.</p>
+        <p class="subtitle">Four companies, one shared board, fake money. Every order moves the price, and the whole board ticks every 15 seconds.</p>
       </div>
       <div class="masthead-side">
         <div class="live-badge"><span class="live-dot"></span> Live market</div>
         <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Sound" aria-pressed="true">Sound: on</button>
       </div>
     </header>
+    <div class="tick-strip" aria-hidden="true">
+      <div class="tick-meter"><span id="tick-fill"></span></div>
+      <span id="tick-count">Move in 15.0s</span>
+    </div>
     <section class="status" aria-live="polite">
       <strong>Day <span id="day">1</span> / 365</strong>
       <span>Cash: $<span id="cash">10,000.00</span></span>
@@ -41,12 +45,12 @@
       <span>Mood: <span id="sentiment">Neutral</span></span>
     </section>
 
-    <p id="message">Pick a company, enter a share count, and trade. The market ticks every 15 seconds.</p>
+    <p id="message">Pick a company, enter a share count, and trade. Every order nudges the price; big ones shove it.</p>
 
     <section class="market-section">
       <div class="section-heading">
         <h2>Today’s market</h2>
-        <span class="section-note">Prices move every 15 seconds</span>
+        <span class="section-note">Bigger orders move the price further</span>
       </div>
       <table class="market-table">
       <thead>

@@ -8,7 +8,9 @@ a Cloudflare Worker with a Durable Object.
 - Backend: <https://pocket-market-worker.unpaidandpoor.workers.dev>
 
 There is no real money. Prices come from live server ticks only; the history is
-never backfilled.
+never backfilled. Every order fills with slippage and pushes the shared tape in
+the trade's direction, so large trades move the price against you and everyone
+else sees the move immediately.
 
 ## Layout
 
