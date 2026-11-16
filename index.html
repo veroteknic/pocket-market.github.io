@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-16-copy-strip">
+  <link rel="stylesheet" href="style.css?v=2026-11-16-roguelike-slice">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -28,12 +28,59 @@
     </div>
   </div>
   <main>
-    <header class="masthead">
-      <h1>Pocket Market</h1>
-      <div class="masthead-side">
-        <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Sound" aria-pressed="true">Sound: on</button>
+    <section id="screen-menu" class="screen screen-menu" data-screen="menu">
+      <div class="menu-shell">
+        <header class="menu-head">
+          <h1 class="menu-wordmark">Pocket Market</h1>
+        </header>
+        <dl id="menu-summary" class="menu-summary" hidden>
+          <div class="menu-stat"><dt>Ante</dt><dd id="menu-ante">1 / 8</dd></div>
+          <div class="menu-stat"><dt>Round</dt><dd id="menu-round">1 / 3</dd></div>
+          <div class="menu-stat"><dt>Target</dt><dd id="menu-target">120</dd></div>
+          <div class="menu-stat"><dt>Score</dt><dd id="menu-score">0</dd></div>
+        </dl>
+        <p id="menu-rules" class="menu-rules">8 antes · 3 rounds per ante · $10,000 bankroll</p>
+        <p id="menu-run-line" class="menu-run-line" hidden>—</p>
+        <nav class="menu-actions" aria-label="Game">
+          <button id="menu-primary" class="menu-action primary" type="button">
+            <span id="menu-primary-label">Start run</span>
+            <span id="menu-primary-note" class="menu-action-note">$10,000 bankroll</span>
+          </button>
+          <button id="menu-results" class="menu-action" type="button" hidden>View results</button>
+          <button id="menu-classic" class="menu-action" type="button">Classic board</button>
+        </nav>
+        <p id="menu-error" class="form-error" aria-live="polite"></p>
+        <footer class="menu-footer">
+          <p>Fake money only. No cash-out. Not financial advice.</p>
+          <button id="menu-sound" class="sound-toggle" type="button" aria-label="Sound" aria-pressed="true">Sound: on</button>
+        </footer>
       </div>
-    </header>
+    </section>
+
+    <section id="screen-floor" class="screen screen-floor" data-screen="floor" hidden>
+      <header class="masthead">
+        <div>
+          <button id="floor-menu" class="wordmark" type="button">Pocket Market</button>
+          <p id="floor-mode" class="floor-mode">Classic board</p>
+        </div>
+        <div class="masthead-side">
+          <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Sound" aria-pressed="true">Sound: on</button>
+        </div>
+      </header>
+
+      <section id="run-strip" class="run-strip" aria-label="Run" hidden>
+        <div class="run-strip-main">
+          <div class="run-cell"><span>Ante</span><strong id="run-ante">1 / 8</strong></div>
+          <div class="run-cell"><span>Round</span><strong id="run-round">1 / 3</strong></div>
+          <div class="run-cell"><span>Target</span><strong id="run-target">120</strong></div>
+          <div class="run-cell"><span>Score</span><strong id="run-score">0</strong></div>
+          <div class="run-cell"><span>Preview</span><strong id="run-preview">—</strong><small id="run-preview-formula">—</small></div>
+        </div>
+        <div class="run-actions">
+          <button id="run-lock" class="run-lock" type="button">Lock round</button>
+          <button id="run-retire" class="run-retire" type="button">Retire run</button>
+        </div>
+      </section>
 
     <div class="tick-strip" aria-hidden="true">
       <div class="tick-meter"><span id="tick-fill"></span></div>
@@ -133,6 +180,61 @@
     <footer class="colophon">
       <p>Fake money only. No cash-out. Not financial advice.</p>
     </footer>
+    </section>
+
+    <section id="screen-score" class="screen screen-score" data-screen="score" hidden>
+      <div class="score-shell">
+        <header class="score-head">
+          <div>
+            <p class="score-kicker">Scoring</p>
+            <h2 id="score-round" class="score-round">Ante 1 · Round 1</h2>
+          </div>
+          <div class="score-target">
+            <span>Target</span>
+            <strong id="score-target">120</strong>
+          </div>
+        </header>
+        <ul id="score-effects" class="score-effects"></ul>
+        <div class="score-total">
+          <div>
+            <span class="score-total-label">Round score</span>
+            <div id="score-final">0</div>
+          </div>
+          <span id="score-verdict" class="score-verdict"></span>
+        </div>
+        <div class="score-meter" aria-hidden="true"><span id="score-meter-fill"></span></div>
+        <div class="score-actions">
+          <button id="score-menu" class="link-button" type="button">Menu</button>
+          <button id="score-next" type="button">Next round</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-results" class="screen screen-results" data-screen="results" hidden>
+      <div class="results-shell">
+        <header class="results-head">
+          <p class="results-kicker">Run results</p>
+          <h2 id="results-title">Run complete</h2>
+          <p class="results-score-label">Score</p>
+          <div id="results-score">0</div>
+        </header>
+        <dl class="results-stats">
+          <div class="results-stat"><dt>Antes</dt><dd id="results-antes">0 / 8</dd></div>
+          <div class="results-stat"><dt>Best round</dt><dd id="results-best">0</dd></div>
+          <div class="results-stat"><dt>Reached</dt><dd id="results-reached">Ante 1 · Round 1</dd></div>
+          <div class="results-stat"><dt>Portfolio</dt><dd id="results-portfolio">$10,000.00</dd></div>
+        </dl>
+        <section class="results-history">
+          <h2>Rounds</h2>
+          <ol id="results-rounds"></ol>
+        </section>
+        <div class="results-actions">
+          <button id="results-new-run" class="primary-action" type="button">Start new run</button>
+          <button id="results-classic" type="button">Classic board</button>
+          <button id="results-menu" class="link-button" type="button">Menu</button>
+        </div>
+      </div>
+    </section>
   </main>
 
   <aside id="dev-console" hidden>
@@ -190,6 +292,7 @@
         </div>
         <div class="dev-actions">
           <button type="button" data-dev-action="reset">Reset my player</button>
+          <button type="button" data-dev-action="run-reset">Reset run</button>
         </div>
         <p class="dev-label">Account cleanup</p>
         <div class="dev-actions">
@@ -200,6 +303,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-16-copy-strip"></script>
+  <script src="game.js?v=2026-11-16-roguelike-slice"></script>
 </body>
 </html>

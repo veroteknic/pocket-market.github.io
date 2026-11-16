@@ -1,6 +1,6 @@
 # Pocket Market — Roguelike Transformation Plan
 
-Status: **Phase 0 complete — audit and planning. No gameplay implementation yet.**
+Status: **Phase 1A/1B complete; end-to-end slice in progress (1C, basic Phase 3/4).**
 Last updated: 2026-11-16
 Source specification: `AGENTS.md`, section “MY SECTION”.
 
@@ -890,16 +890,41 @@ implementation can start immediately if approved.
 | Phase | State | Notes |
 | --- | --- | --- |
 | 0 — Audit and planning | **Complete** | This document. |
-| 1 — Game foundation | Not started | Split into 1A/1B/1C. |
-| 2 — Visual foundation | Not started | Depends on 1A screen shell. |
-| 3 — Core gameplay | Not started | Depends on 1B/1C rules and save. |
-| 4 — Trading integration | Not started | Depends on 3 scoring input contract. |
+| 1 — Game foundation | **1A + 1B complete; 1C mostly complete** | Hash screens, run save, start/continue/lock/advance/retire. Rounds advance on manual lock, not tick boundaries. |
+| 2 — Visual foundation | **Partial** | Editorial screen shell, menu, run strip, score and results layouts. Card/rarity system still to come. |
+| 3 — Core gameplay | **Basic slice working** | Deterministic `chips × mult` scoring, targets, failure, progression, scoring screen and tests. |
+| 4 — Trading integration | **Basic slice working** | Run portfolio routes through the existing trade endpoint; shared market, slippage and broadcast preserved. |
 | 5 — Joker system | Not started | Depends on 3 engine and 4 snapshot. |
 | 6 — Shop and consumables | Not started | Depends on 5 catalog and 1B save. |
 | 7 — Boss rounds and events | Not started | Depends on 3, 5, 6. |
-| 8 — Polish | Not started | After mechanics stabilize. |
+| 8 — Polish | Partial | Screen transitions, score reveal and reduced-motion support; further polish after mechanics stabilize. |
 | 9 — Multiplayer hardening | Not started | Continuous, formalized here. |
 | 10 — Release QA | Not started | Final. |
+
+### Current milestone record
+
+**Completed**
+
+- Frontend: menu, floor, scoring, and results screens with a hash router; classic board
+  remains reachable from the menu.
+- Server: versioned `RunSaveV1`, migration, start/lock/advance/retire, developer reset,
+  archived classic portfolios, and run-aware leaderboard values.
+- Scoring: base chips from round portfolio return, holding/rising bonuses, diversification
+  multiplier, server-authoritative lock, client preview.
+- Verification: `node --check game.js`, 12 Worker rule tests, Worker typecheck/build, and
+  69 mocked browser checks across 1440/1024/768/390 px including reload resume.
+
+**Known gaps**
+
+- No jokers, shop, boss rounds, or run currency yet.
+- Round ends only on manual lock; there is no tick-boundary model.
+- Run saves store the active account, but a full reconnect/duplicate-action audit is Phase 9.
+- Results screen omits leaderboard placement and run duration.
+
+**Recommended next milestone**
+
+- Phase 5A: joker catalog and declarative effect data, rendered as a read-only collection
+  screen, before acquisition or shop mechanics.
 
 ---
 
@@ -927,5 +952,6 @@ The project is done only when:
 
 ## 14. Immediate next step
 
-Await decisions on D1–D5, then start **Phase 1A: screen shell and navigation** with the
-classic board preserved as a fallback. No scoring, jokers, or shop in that milestone.
+Validate the deployed end-to-end slice, then start **Phase 5A: joker catalog and
+collection screen** before acquisition or shop mechanics. Keep the classic board reachable
+throughout.

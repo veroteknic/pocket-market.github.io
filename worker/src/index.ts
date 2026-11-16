@@ -1,4 +1,14 @@
 import { DurableObject } from "cloudflare:workers";
+import {
+  advanceRun,
+  createRun,
+  lockRound,
+  migrateRun,
+  portfolioValue,
+  retireRun,
+  RUN_RULES,
+  type RunSaveV1,
+} from "./run.ts";
 
 const startingPrices = {
   MTA: 42.00,
@@ -388,12 +398,94 @@ export class Market extends DurableObject {
     return player;
   }
 
+  async getRun(playerId: string): Promise<RunSaveV1 | null> {
+    const stored = await this.ctx.storage.get<unknown>(`run:${playerId}`);
+    if (!stored) return null;
+    return migrateRun(stored);
+  }
+
+  // A run is created only when the player asks for one. The town portfolio is
+  // archived first so the classic board and every past trade stay inspectable.
+  async startRun(playerId: string, playerName: string): Promise<RunSaveV1> {
+    const existing = await this.getRun(playerId);
+    if (existing && existing.phase !== "results") throw new Error("A run is already in progress");
+    if (existing) await this.archiveRun(existing);
+
+    if (!(await this.ctx.storage.get(`legacy:${playerId}`))) {
+      const player = await this.getPlayer(playerId);
+      await this.ctx.storage.put(`legacy:${playerId}`, { archivedAt: Date.now(), player });
+    }
+
+    const market = await this.getMarket();
+    const run = createRun(playerId, playerName, market.prices, market.tick);
+    await this.ctx.storage.put(`run:${playerId}`, run);
+    return run;
+  }
+
+  async lockPlayerRun(playerId: string) {
+    const run = await this.getRun(playerId);
+    if (!run) throw new Error("No active run");
+    const market = await this.getMarket();
+    const locked = lockRound(run, market.prices, market.tick);
+    await this.ctx.storage.put(`run:${playerId}`, locked.run);
+    return locked;
+  }
+
+  async advancePlayerRun(playerId: string): Promise<RunSaveV1> {
+    const run = await this.getRun(playerId);
+    if (!run) throw new Error("No active run");
+    const market = await this.getMarket();
+    const next = advanceRun(run, market.prices, market.tick);
+    await this.ctx.storage.put(`run:${playerId}`, next);
+    return next;
+  }
+
+  async retirePlayerRun(playerId: string): Promise<RunSaveV1> {
+    const run = await this.getRun(playerId);
+    if (!run) throw new Error("No active run");
+    const next = retireRun(run);
+    await this.ctx.storage.put(`run:${playerId}`, next);
+    return next;
+  }
+
+  // Completed runs are bounded per player so the run key stays small.
+  private async archiveRun(run: RunSaveV1) {
+    await this.ctx.storage.put(`runArchive:${run.playerId}:${run.runId}`, {
+      runId: run.runId,
+      ante: run.ante,
+      round: run.round,
+      scoreTotal: run.scoreTotal,
+      bestRoundScore: run.bestRoundScore,
+      completedAntes: run.completedAntes,
+      endedReason: run.endedReason || "retired",
+      createdAt: run.createdAt,
+      updatedAt: run.updatedAt,
+    });
+    const archived = await this.ctx.storage.list<{ updatedAt: number }>({ prefix: `runArchive:${run.playerId}:` });
+    if (archived.size > RUN_RULES.archiveLimit) {
+      const stale = [...archived.entries()]
+        .sort((a, b) => a[1].updatedAt - b[1].updatedAt)
+        .slice(0, archived.size - RUN_RULES.archiveLimit)
+        .map(([key]) => key);
+      await this.ctx.storage.delete(stale);
+    }
+  }
+
   async getLeaderboard(market: MarketState): Promise<LeaderEntry[]> {
     const players = await this.ctx.storage.list<PlayerState>({ prefix: "player:" });
+    const runs = await this.ctx.storage.list<RunSaveV1>({ prefix: "run:" });
+    const activeRuns = new Map<string, RunSaveV1>();
+    for (const [, run] of runs) {
+      if (run.phase !== "results") activeRuns.set(run.playerId, run);
+    }
     const entries: Array<{ playerId: string; name: string; score: number }> = [];
     for (const [key, player] of players) {
-      const score = Math.round(player.cash + Object.entries(player.holdings).reduce((total, [ticker, shares]) => total + (market.prices[ticker as keyof Prices] * (shares || 0)), 0));
-      entries.push({ playerId: key.slice("player:".length), name: player.name || "Anonymous", score });
+      const playerId = key.slice("player:".length);
+      const run = activeRuns.get(playerId);
+      const score = run
+        ? Math.round(portfolioValue(run.cash, run.holdings, market.prices))
+        : Math.round(player.cash + Object.entries(player.holdings).reduce((total, [ticker, shares]) => total + (market.prices[ticker as keyof Prices] * (shares || 0)), 0));
+      entries.push({ playerId, name: player.name || "Anonymous", score });
     }
     entries.sort((a, b) => b.score - a.score);
     const rankKey = `ranks:${market.daily.dateKey}`;
@@ -511,6 +603,18 @@ export class Market extends DurableObject {
     return player;
   }
 
+  async developerRunControl(token: string, action: string) {
+    const session = await this.sessionForToken(token);
+    if (!session?.developer) throw new Error("Developer access required");
+    if (action === "reset") {
+      const run = await this.getRun(session.playerId);
+      if (run) await this.archiveRun(run);
+      await this.ctx.storage.delete(`run:${session.playerId}`);
+      return { reset: true };
+    }
+    throw new Error("Unknown developer run control");
+  }
+
   async trade(playerId: string, ticker: string, action: string, quantity: number) {
     if (!/^[a-zA-Z0-9_-]{3,64}$/.test(playerId)) throw new Error("Invalid player ID");
     if (!(ticker in startingPrices) || !["buy", "sell"].includes(action)) throw new Error("Invalid trade");
@@ -519,8 +623,14 @@ export class Market extends DurableObject {
     const symbol = ticker as keyof Prices;
     const market = await this.getMarket();
     const player = await this.getPlayer(playerId);
-    const owned = player.holdings[symbol] || 0;
-    const costBasis = player.costBasis[symbol] || 0;
+    const run = await this.getRun(playerId);
+    if (run && run.phase === "scoring") throw new Error("Trading is locked");
+    // A finished run leaves its save in place for the results screen. Once the
+    // run is over, the archived classic portfolio becomes the live account again.
+    const activeRun = run && run.phase === "trading" ? run : null;
+    const account = activeRun || player;
+    const owned = account.holdings[symbol] || 0;
+    const costBasis = account.costBasis[symbol] || 0;
     const quote = market.prices[symbol];
     // Size has a price. The fill slips against you and the tape moves for
     // everyone, so a big order costs real ground and smaller players can react
@@ -532,17 +642,17 @@ export class Market extends DurableObject {
     const total = execution * quantity;
 
     if (action === "buy") {
-      if (player.cash < total) throw new Error("Not enough cash");
-      player.cash = roundMoney(player.cash - total);
-      player.holdings[symbol] = owned + quantity;
-      player.costBasis[symbol] = roundMoney(costBasis + total);
+      if (account.cash < total) throw new Error("Not enough cash");
+      account.cash = roundMoney(account.cash - total);
+      account.holdings[symbol] = owned + quantity;
+      account.costBasis[symbol] = roundMoney(costBasis + total);
     } else {
       if (owned < quantity) throw new Error("Not enough shares");
-      player.cash = roundMoney(player.cash + total);
-      player.holdings[symbol] = owned - quantity;
+      account.cash = roundMoney(account.cash + total);
+      account.holdings[symbol] = owned - quantity;
       const averageCost = owned > 0 ? costBasis / owned : 0;
-      player.costBasis[symbol] = roundMoney(Math.max(0, costBasis - averageCost * quantity));
-      player.realizedProfit = roundMoney(player.realizedProfit + total - averageCost * quantity);
+      account.costBasis[symbol] = roundMoney(Math.max(0, costBasis - averageCost * quantity));
+      account.realizedProfit = roundMoney(account.realizedProfit + total - averageCost * quantity);
     }
 
     const flow = (market.orderFlow?.[symbol] || 0) + (action === "buy" ? quantity : -quantity);
@@ -566,10 +676,30 @@ export class Market extends DurableObject {
       },
       orderFlow: { ...market.orderFlow, [symbol]: Math.max(-100, Math.min(100, flow)) },
     };
-    await this.ctx.storage.put(`player:${playerId}`, player);
+    if (activeRun) {
+      activeRun.tradeCount += 1;
+      activeRun.updatedAt = tradedAt;
+      await this.ctx.storage.put(`run:${playerId}`, activeRun);
+    } else {
+      await this.ctx.storage.put(`player:${playerId}`, player);
+    }
     await this.ctx.storage.put("market", nextMarket);
     this.broadcast(nextMarket);
-    return { player, price: execution, marketPrice: tapePrice, impact, ticker: symbol, action, quantity };
+    return {
+      player: {
+        name: player.name,
+        cash: account.cash,
+        holdings: account.holdings,
+        costBasis: account.costBasis,
+        realizedProfit: account.realizedProfit,
+      },
+      price: execution,
+      marketPrice: tapePrice,
+      impact,
+      ticker: symbol,
+      action,
+      quantity,
+    };
   }
 
   // Live updates carry prices, not the whole record. History only rides along on
@@ -710,6 +840,34 @@ export default {
       }
     }
 
+    if (url.pathname.startsWith("/api/run") && ["GET", "POST"].includes(request.method)) {
+      const market = env.MARKET.getByName("global-school-year-market-v12");
+      const playerId = await market.playerIdForSession(sessionToken(request));
+      if (!playerId) return Response.json({ error: "Not authenticated" }, { status: 401, headers: cors });
+
+      if (url.pathname === "/api/run" && request.method === "GET") {
+        return Response.json({ run: await market.getRun(playerId), rules: RUN_RULES }, { headers: cors });
+      }
+
+      try {
+        if (url.pathname === "/api/run/start" && request.method === "POST") {
+          const player = await market.getPlayer(playerId);
+          return Response.json({ run: await market.startRun(playerId, player.name), rules: RUN_RULES }, { headers: cors });
+        }
+        if (url.pathname === "/api/run/round/lock" && request.method === "POST") {
+          return Response.json({ ...(await market.lockPlayerRun(playerId)), rules: RUN_RULES }, { headers: cors });
+        }
+        if (url.pathname === "/api/run/round/advance" && request.method === "POST") {
+          return Response.json({ run: await market.advancePlayerRun(playerId), rules: RUN_RULES }, { headers: cors });
+        }
+        if (url.pathname === "/api/run/retire" && request.method === "POST") {
+          return Response.json({ run: await market.retirePlayerRun(playerId), rules: RUN_RULES }, { headers: cors });
+        }
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "Run action rejected" }, { status: 400, headers: cors });
+      }
+    }
+
     if (url.pathname === "/api/dev/status" && request.method === "GET") {
       const market = env.MARKET.getByName("global-school-year-market-v12");
       return Response.json({ authorized: await market.isDeveloperSession(sessionToken(request)) }, { headers: cors });
@@ -749,6 +907,17 @@ export default {
         const market = env.MARKET.getByName("global-school-year-market-v12");
         const player = await market.developerPlayerControl(token, body.action || "", body);
         return Response.json(player, { headers: cors });
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "Developer control rejected" }, { status: 403, headers: cors });
+      }
+    }
+
+    if (url.pathname === "/api/dev/run" && request.method === "POST") {
+      try {
+        const token = sessionToken(request);
+        const body = await request.json() as { action?: string };
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        return Response.json(await market.developerRunControl(token, body.action || ""), { headers: cors });
       } catch (error) {
         return Response.json({ error: error instanceof Error ? error.message : "Developer control rejected" }, { status: 403, headers: cors });
       }

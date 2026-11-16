@@ -6,6 +6,16 @@ const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
 const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
+const RUN_RULES_FALLBACK = { antes: 8, roundsPerAnte: 3, startingCash: 10000 };
+const SCREEN_NAMES = ["menu", "floor", "score", "results"];
+let runRules = { ...RUN_RULES_FALLBACK };
+let runState = null;
+let lastRoundResult = null;
+let floorMode = "classic";
+let activeScreen = "menu";
+let runBusy = false;
+let scoreAnimationToken = 0;
+let scoreRenderKey = "";
 
 function updateDevConsole(data) {
   if (!isDeveloper()) return;
@@ -174,22 +184,36 @@ function cue(name) {
     // A fat order gets a low thud under the regular trade cue.
     tone(170, { end: 118, duration: 0.17, type: "square", gain: 0.08 });
     tone(520, { end: 380, duration: 0.05, gain: 0.06, delay: 0.01 });
+  } else if (name === "tick") {
+    tone(760, { duration: 0.05, gain: 0.05 });
+  } else if (name === "score") {
+    [523, 659, 784, 1046].forEach((frequency, index) => tone(frequency, { duration: 0.18, gain: 0.08, delay: index * 0.07 }));
+  } else if (name === "fail") {
+    [330, 262, 196].forEach((frequency, index) => tone(frequency, { duration: 0.2, type: "sawtooth", gain: 0.07, delay: index * 0.09 }));
   }
 }
 
 function applySound(enabled, persist = true) {
   sound.enabled = enabled;
-  $("sound-toggle").textContent = `Sound: ${enabled ? "on" : "off"}`;
-  $("sound-toggle").setAttribute("aria-pressed", String(enabled));
+  ["sound-toggle", "menu-sound"].forEach(id => {
+    const button = $(id);
+    if (!button) return;
+    button.textContent = `Sound: ${enabled ? "on" : "off"}`;
+    button.setAttribute("aria-pressed", String(enabled));
+  });
   if (persist) localStorage.setItem("pocket-market-sound", enabled ? "on" : "off");
 }
-applySound(sound.enabled, false);
-$("sound-toggle").addEventListener("click", () => {
+function toggleSound() {
   applySound(!sound.enabled);
   if (sound.enabled) {
     unlockAudio();
     cue("buy");
   }
+}
+applySound(sound.enabled, false);
+["sound-toggle", "menu-sound"].forEach(id => {
+  const button = $(id);
+  if (button) button.addEventListener("click", toggleSound);
 });
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
@@ -210,6 +234,44 @@ function getCurrentDayOfYear() {
 
 function portfolioValue() {
   return state.companies.reduce((sum, company) => sum + company.price * company.shares, 0);
+}
+
+const isRunTrading = () => Boolean(runState && runState.phase === "trading");
+
+function applyAccount(account) {
+  if (!account) return;
+  state.cash = Number(account.cash) || 0;
+  playerStats.costBasis = account.costBasis || {};
+  playerStats.realizedProfit = Number(account.realizedProfit) || 0;
+  state.companies.forEach(company => {
+    company.shares = account.holdings?.[company.ticker] || 0;
+  });
+}
+
+function applyRunAccount() {
+  if (!runState) return;
+  applyAccount({
+    cash: runState.cash,
+    holdings: runState.holdings,
+    costBasis: runState.costBasis,
+    realizedProfit: runState.realizedProfit,
+  });
+}
+
+// A display-only preview of the same chips x mult rules the Worker uses when
+// the round is locked. The server remains the only source of a final score.
+function previewRoundScore() {
+  if (!runState || runState.phase !== "trading") return null;
+  const startValue = Math.max(1, Number(runState.roundStartValue) || 1);
+  const endValue = state.cash + portfolioValue();
+  const roundReturn = (endValue - startValue) / startValue;
+  const baseChips = Math.round(Math.min(900, Math.max(0, 100 + 400 * roundReturn)));
+  const startPrices = runState.roundStartPrices || {};
+  const held = state.companies.filter(company => company.shares > 0);
+  const rising = held.filter(company => company.price > (Number(startPrices[company.ticker]) || company.price)).length;
+  const chips = baseChips + 25 * held.length + 20 * rising;
+  const mult = Math.round((1 + 0.25 * Math.min(4, held.length)) * 100) / 100;
+  return { chips, mult, score: Math.round(chips * mult) };
 }
 
 function unrealizedProfit(company) {
@@ -348,6 +410,7 @@ function render() {
       </td>
     </tr>`).join("");
   drawChart();
+  renderRunStrip();
 }
 
 // The next repricing is the only timer in the game, so it gets its own strip.
@@ -628,6 +691,14 @@ async function trade(index, action) {
     playerStats.costBasis = result.player.costBasis || {};
     playerStats.realizedProfit = result.player.realizedProfit || 0;
     state.companies.forEach(item => { item.shares = result.player.holdings[item.ticker] || 0; });
+    // Keep the local run snapshot in step with the fill so leaving and
+    // re-entering the floor does not redraw the pre-trade account.
+    if (isRunTrading()) {
+      runState.cash = result.player.cash;
+      runState.holdings = { ...result.player.holdings };
+      runState.costBasis = result.player.costBasis || {};
+      runState.realizedProfit = result.player.realizedProfit || 0;
+    }
     // Apply the fill to the tape immediately; the broadcast from the server
     // will confirm the same price a moment later.
     if (Number.isFinite(result.marketPrice)) {
@@ -655,19 +726,24 @@ async function loadPlayer() {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/player`, { credentials: "include" });
     if (!response.ok) {
       if (savedPlayerName) $("name-input").value = savedPlayerName;
+      await loadRunState();
+      renderMenu();
       return;
     }
     const player = await response.json();
     localStorage.setItem("pocket-market-player-name", player.name);
-    state.cash = player.cash;
-    playerStats.costBasis = player.costBasis || {};
-    playerStats.realizedProfit = player.realizedProfit || 0;
-    state.companies.forEach(company => { company.shares = player.holdings[company.ticker] || 0; });
+    applyAccount(player);
     $("identity-gate").hidden = true;
     loadDeveloperAccess();
+    await loadRunState();
+    if (runState) applyRunAccount();
+    renderMenu();
     render();
+    renderLeaderboard();
+    await routeAfterAuth();
   } catch {
     if (savedPlayerName) $("name-input").value = savedPlayerName;
+    renderMenu();
   }
 }
 
@@ -734,10 +810,11 @@ function connectToMarket() {
       if (typeof nextPrice === "number") company.price = nextPrice;
     });
 
-    render();
     renderTickMeter();
-    if (hadLiveState) flashPrices(previousPrices);
-    renderLeaderboard();
+    if (activeScreen === "floor") {
+      render();
+      if (hadLiveState) flashPrices(previousPrices);
+    }
   });
 
   socket.addEventListener("error", () => {
@@ -793,6 +870,462 @@ async function renderLeaderboard() {
   }
 }
 
+/* ---------- Screens and runs ---------- */
+
+function setScreen(name) {
+  activeScreen = name;
+  document.querySelectorAll(".screen").forEach(section => {
+    section.hidden = section.dataset.screen !== name;
+  });
+  document.body.dataset.screen = name;
+}
+
+function runRulesFrom(payload) {
+  if (!payload?.rules) return;
+  runRules = { ...runRules, ...payload.rules };
+}
+
+function renderRunStrip() {
+  const strip = $("run-strip");
+  if (!strip) return;
+  const live = floorMode === "run" && isRunTrading();
+  strip.hidden = !live;
+  if (!live) return;
+  $("run-ante").textContent = `${runState.ante} / ${runRules.antes}`;
+  $("run-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;
+  $("run-target").textContent = Number(runState.target).toLocaleString();
+  $("run-score").textContent = Number(runState.scoreTotal || 0).toLocaleString();
+  const preview = previewRoundScore();
+  $("run-preview").textContent = preview ? preview.score.toLocaleString() : "—";
+  $("run-preview-formula").textContent = preview ? `${preview.chips.toLocaleString()} × ${preview.mult}` : "—";
+  strip.classList.toggle("pass", Boolean(preview && preview.score >= runState.target));
+  $("run-lock").disabled = runBusy;
+}
+
+function renderMenu() {
+  const summary = $("menu-summary");
+  const rules = $("menu-rules");
+  const line = $("menu-run-line");
+  const resultsButton = $("menu-results");
+  const classicButton = $("menu-classic");
+  const primary = $("menu-primary");
+  const label = $("menu-primary-label");
+  const note = $("menu-primary-note");
+
+  rules.textContent = `${runRules.antes} antes · ${runRules.roundsPerAnte} rounds per ante · $${money(runRules.startingCash)} bankroll`;
+  summary.hidden = true;
+  line.hidden = true;
+  rules.hidden = false;
+  resultsButton.hidden = true;
+  classicButton.hidden = false;
+  primary.disabled = runBusy;
+
+  if (!runState) {
+    label.textContent = "Start run";
+    note.textContent = `$${money(runRules.startingCash)} bankroll`;
+    primary.dataset.action = "start";
+    return;
+  }
+
+  if (runState.phase === "trading" || runState.phase === "scoring") {
+    summary.hidden = false;
+    rules.hidden = true;
+    $("menu-ante").textContent = `${runState.ante} / ${runRules.antes}`;
+    $("menu-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;
+    $("menu-target").textContent = Number(runState.target).toLocaleString();
+    $("menu-score").textContent = Number(runState.scoreTotal || 0).toLocaleString();
+    classicButton.hidden = true;
+    if (runState.phase === "trading") {
+      label.textContent = "Continue run";
+      note.textContent = `Round ${runState.round} · target ${runState.target}`;
+      primary.dataset.action = "continue";
+    } else {
+      label.textContent = "View scoring";
+      note.textContent = `Round score ${Number(runState.lastRoundScore || 0).toLocaleString()}`;
+      primary.dataset.action = "scoring";
+    }
+    return;
+  }
+
+  line.hidden = false;
+  line.textContent = `Score ${Number(runState.scoreTotal || 0).toLocaleString()} · best round ${Number(runState.bestRoundScore || 0).toLocaleString()} · ante ${runState.ante} round ${runState.round}`;
+  label.textContent = "Start new run";
+  note.textContent = `Best round ${Number(runState.bestRoundScore || 0).toLocaleString()}`;
+  primary.dataset.action = "start";
+  resultsButton.hidden = false;
+  classicButton.hidden = false;
+}
+
+function currentRoundResult() {
+  if (lastRoundResult) return lastRoundResult;
+  if (!runState?.roundHistory?.length) return null;
+  return runState.roundHistory[runState.roundHistory.length - 1];
+}
+
+function formatEffectAmount(kind, value) {
+  if (kind === "chips") return Math.round(value).toLocaleString();
+  if (kind === "chips-add") return `+${Math.round(value).toLocaleString()}`;
+  if (kind === "mult") return `${value.toFixed(2)}×`;
+  return `+${value.toFixed(2)}×`;
+}
+
+function animateNumber(element, from, to, format, duration = 420) {
+  if (reducedMotion.matches) {
+    element.textContent = format(to);
+    return;
+  }
+  const startedAt = performance.now();
+  const update = now => {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    element.textContent = format(from + (to - from) * eased);
+    if (progress < 1) requestAnimationFrame(update);
+    else element.textContent = format(to);
+  };
+  requestAnimationFrame(update);
+}
+
+function setScoreVerdict(result, { clear = false, silent = false } = {}) {
+  const verdict = $("score-verdict");
+  if (clear) {
+    verdict.textContent = "";
+    verdict.className = "score-verdict";
+    return;
+  }
+  verdict.textContent = result.pass ? "Cleared" : "Missed";
+  verdict.className = `score-verdict ${result.pass ? "pass" : "fail"}`;
+  if (!silent) cue(result.pass ? "score" : "fail");
+}
+
+function setScoreMeter(result) {
+  const fill = $("score-meter-fill");
+  const ratio = result.target > 0 ? Math.min(1, result.score / result.target) : 1;
+  fill.style.width = `${ratio * 100}%`;
+  fill.style.background = result.pass ? "var(--green)" : "var(--red)";
+}
+
+function revealScoreImmediately(result) {
+  [...$("score-effects").children].forEach(row => {
+    row.classList.add("revealed");
+    const amount = Number(row.dataset.value);
+    row.querySelector(".value").textContent = formatEffectAmount(row.dataset.kind, amount);
+  });
+  $("score-final").textContent = result.score.toLocaleString();
+  setScoreMeter(result);
+  setScoreVerdict(result, { silent: true });
+}
+
+function playScoreSequence(result) {
+  scoreAnimationToken += 1;
+  const token = scoreAnimationToken;
+  const rows = [...$("score-effects").children];
+  rows.forEach(row => row.classList.remove("revealed"));
+  $("score-final").textContent = "0";
+  $("score-meter-fill").style.width = "0%";
+  setScoreVerdict(result, { clear: true });
+
+  const step = index => {
+    if (token !== scoreAnimationToken) return;
+    if (index >= rows.length) {
+      animateNumber($("score-final"), 0, result.score, value => Math.round(value).toLocaleString(), 540);
+      setTimeout(() => {
+        if (token !== scoreAnimationToken) return;
+        setScoreMeter(result);
+        setScoreVerdict(result);
+      }, reducedMotion.matches ? 0 : 540);
+      return;
+    }
+    const row = rows[index];
+    row.classList.add("revealed");
+    const amount = Number(row.dataset.value);
+    animateNumber(row.querySelector(".value"), 0, amount, value => formatEffectAmount(row.dataset.kind, value), 260);
+    cue("tick");
+    setTimeout(() => step(index + 1), reducedMotion.matches ? 0 : 280);
+  };
+  step(0);
+}
+
+function renderScoreScreen() {
+  const result = currentRoundResult();
+  if (!result) return false;
+  $("score-round").textContent = `Ante ${result.ante} · Round ${result.round}`;
+  $("score-target").textContent = Number(result.target).toLocaleString();
+  const list = $("score-effects");
+  list.replaceChildren();
+  result.effects.forEach(effect => {
+    const row = document.createElement("li");
+    row.className = "score-effect";
+    row.dataset.kind = effect.kind;
+    row.dataset.value = String(effect.value);
+    const label = document.createElement("span");
+    label.className = "score-effect-label";
+    label.textContent = effect.label;
+    const value = document.createElement("span");
+    value.className = "score-effect-value";
+    const amount = document.createElement("span");
+    amount.className = "value";
+    amount.textContent = "0";
+    const unit = document.createElement("small");
+    unit.textContent = effect.kind === "chips" || effect.kind === "chips-add" ? "chips" : "mult";
+    value.append(amount, unit);
+    row.append(label, value);
+    list.append(row);
+  });
+
+  const lastRound = result.round >= runRules.roundsPerAnte;
+  const lastAnte = result.ante >= runRules.antes;
+  $("score-next").textContent = !result.pass
+    ? "See results"
+    : lastRound && lastAnte
+      ? "Finish run"
+      : lastRound
+        ? "Next ante"
+        : "Next round";
+
+  const key = `${runState?.runId}:${result.roundId}:${result.score}`;
+  if (scoreRenderKey === key) revealScoreImmediately(result);
+  else {
+    scoreRenderKey = key;
+    playScoreSequence(result);
+  }
+  return true;
+}
+
+function renderResultsScreen() {
+  if (!runState) return false;
+  const titles = { completed: "Run complete", failed: "Run ended", retired: "Run retired" };
+  $("results-title").textContent = titles[runState.endedReason] || "Run ended";
+  $("results-score").textContent = Number(runState.scoreTotal || 0).toLocaleString();
+  $("results-antes").textContent = `${runState.completedAntes || 0} / ${runRules.antes}`;
+  $("results-best").textContent = Number(runState.bestRoundScore || 0).toLocaleString();
+  $("results-reached").textContent = `Ante ${runState.ante} · Round ${runState.round}`;
+  const holdingsValue = state.companies.reduce((sum, company) => sum + company.price * (runState.holdings?.[company.ticker] || 0), 0);
+  $("results-portfolio").textContent = `$${money((Number(runState.cash) || 0) + holdingsValue)}`;
+  $("results-new-run").disabled = runBusy;
+
+  const list = $("results-rounds");
+  list.replaceChildren();
+  const history = [...(runState.roundHistory || [])].reverse().slice(0, 12);
+  if (!history.length) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = "—";
+    list.append(empty);
+    return true;
+  }
+  history.forEach(result => {
+    const item = document.createElement("li");
+    const round = document.createElement("span");
+    round.className = "round";
+    round.textContent = `A${result.ante}R${result.round}`;
+    const verdict = document.createElement("span");
+    verdict.className = `verdict ${result.pass ? "pass" : "fail"}`;
+    verdict.textContent = result.pass ? "Pass" : "Miss";
+    const score = document.createElement("span");
+    score.className = "score";
+    score.textContent = Number(result.score).toLocaleString();
+    const target = document.createElement("span");
+    target.className = "target";
+    target.textContent = `/ ${Number(result.target).toLocaleString()}`;
+    item.append(round, verdict, score, target);
+    list.append(item);
+  });
+  return true;
+}
+
+async function runRequest(path) {
+  const response = await fetch(`${BACKEND_HTTP_URL}${path}`, { method: "POST", credentials: "include" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Run action rejected.");
+  runRulesFrom(data);
+  return data;
+}
+
+async function loadRunState() {
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/run`, { credentials: "include" });
+    if (!response.ok) {
+      runState = null;
+      return null;
+    }
+    const data = await response.json();
+    runRulesFrom(data);
+    runState = data.run || null;
+    lastRoundResult = runState?.phase === "scoring"
+      ? runState.roundHistory?.[runState.roundHistory.length - 1] || null
+      : null;
+    if (runState) applyRunAccount();
+    return runState;
+  } catch {
+    runState = null;
+    return null;
+  }
+}
+
+async function loadClassicAccount() {
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/player`, { credentials: "include" });
+    if (!response.ok) return;
+    const player = await response.json();
+    localStorage.setItem("pocket-market-player-name", player.name);
+    applyAccount(player);
+  } catch {
+    // The default starting account stays visible if the server is unreachable.
+  }
+}
+
+async function prepareFloor() {
+  if (isRunTrading()) {
+    floorMode = "run";
+    applyRunAccount();
+  } else {
+    floorMode = "classic";
+    await loadClassicAccount();
+  }
+  $("floor-mode").textContent = floorMode === "run" ? "Run" : "Classic board";
+}
+
+async function navigate(name, { hash = true } = {}) {
+  if (!SCREEN_NAMES.includes(name)) name = "menu";
+  if ((name === "score" || name === "results") && !runState) name = "menu";
+  if (name === "floor" && runState?.phase === "scoring") name = "score";
+
+  if (name === "floor") {
+    await prepareFloor();
+    // Reveal the board before drawing so the chart measures a laid-out canvas.
+    setScreen("floor");
+    render();
+  } else {
+    if (name === "menu") renderMenu();
+    if (name === "score" && !renderScoreScreen()) {
+      name = "menu";
+      renderMenu();
+    }
+    if (name === "results" && !renderResultsScreen()) {
+      name = "menu";
+      renderMenu();
+    }
+    setScreen(name);
+  }
+
+  if (hash) history.replaceState(null, "", `#${name}`);
+  if (name !== "floor") window.scrollTo(0, 0);
+}
+
+async function routeAfterAuth() {
+  const hash = location.hash.replace(/^#/, "");
+  if (hash === "menu") {
+    renderMenu();
+    setScreen("menu");
+    return;
+  }
+  if (hash === "floor") {
+    await navigate("floor");
+    return;
+  }
+  if (!runState) {
+    await navigate("menu");
+    return;
+  }
+  if (runState.phase === "scoring") {
+    await navigate("score");
+    return;
+  }
+  if (runState.phase === "results") {
+    await navigate("results");
+    return;
+  }
+  await navigate("floor");
+}
+
+async function startRun() {
+  if (runBusy) return;
+  runBusy = true;
+  $("menu-error").textContent = "";
+  renderMenu();
+  try {
+    const data = await runRequest("/api/run/start");
+    runState = data.run;
+    lastRoundResult = null;
+    scoreRenderKey = "";
+    applyRunAccount();
+    await navigate("floor");
+  } catch (error) {
+    $("menu-error").textContent = error instanceof Error ? error.message : "Run unavailable.";
+    await loadRunState();
+    renderMenu();
+  } finally {
+    runBusy = false;
+    renderMenu();
+    renderRunStrip();
+  }
+}
+
+async function lockRunRound() {
+  if (runBusy || !isRunTrading()) return;
+  runBusy = true;
+  const button = $("run-lock");
+  button.disabled = true;
+  button.textContent = "Locking…";
+  try {
+    const data = await runRequest("/api/run/round/lock");
+    runState = data.run;
+    lastRoundResult = data.result || runState.roundHistory?.[runState.roundHistory.length - 1] || null;
+    scoreRenderKey = "";
+    applyRunAccount();
+    await navigate("score");
+  } catch (error) {
+    setMessage(error instanceof Error ? error.message : "Lock failed.");
+  } finally {
+    runBusy = false;
+    button.disabled = false;
+    button.textContent = "Lock round";
+    renderRunStrip();
+  }
+}
+
+async function advanceRunRound() {
+  if (runBusy) return;
+  runBusy = true;
+  const button = $("score-next");
+  button.disabled = true;
+  try {
+    const data = await runRequest("/api/run/round/advance");
+    runState = data.run;
+    lastRoundResult = null;
+    scoreRenderKey = "";
+    applyRunAccount();
+    await navigate(runState.phase === "trading" ? "floor" : "results");
+  } catch (error) {
+    $("score-verdict").textContent = error instanceof Error ? error.message : "Advance failed.";
+    $("score-verdict").className = "score-verdict fail";
+  } finally {
+    button.disabled = false;
+    runBusy = false;
+    renderRunStrip();
+    renderMenu();
+  }
+}
+
+async function retireCurrentRun() {
+  if (runBusy || !runState) return;
+  if (!confirm("Retire this run?")) return;
+  runBusy = true;
+  try {
+    const data = await runRequest("/api/run/retire");
+    runState = data.run;
+    lastRoundResult = null;
+    scoreRenderKey = "";
+    await navigate("results");
+  } catch (error) {
+    setMessage(error instanceof Error ? error.message : "Retire failed.");
+  } finally {
+    runBusy = false;
+    renderRunStrip();
+    renderMenu();
+  }
+}
+
 $("market").addEventListener("click", event => {
   const button = event.target.closest("button");
   if (button) trade(Number(button.dataset.index), button.dataset.action);
@@ -802,6 +1335,28 @@ document.querySelectorAll(".chart-tab").forEach(button => {
   button.addEventListener("click", () => setChartRange(button.dataset.range));
 });
 setChartRange(chartRange);
+
+$("floor-menu").addEventListener("click", () => navigate("menu"));
+$("run-lock").addEventListener("click", lockRunRound);
+$("run-retire").addEventListener("click", retireCurrentRun);
+$("menu-primary").addEventListener("click", () => {
+  const action = $("menu-primary").dataset.action;
+  if (action === "continue") return navigate("floor");
+  if (action === "scoring") return navigate("score");
+  return startRun();
+});
+$("menu-results").addEventListener("click", () => navigate("results"));
+$("menu-classic").addEventListener("click", () => navigate("floor"));
+$("score-menu").addEventListener("click", () => navigate("menu"));
+$("score-next").addEventListener("click", advanceRunRound);
+$("results-new-run").addEventListener("click", startRun);
+$("results-classic").addEventListener("click", () => navigate("floor"));
+$("results-menu").addEventListener("click", () => navigate("menu"));
+window.addEventListener("hashchange", () => {
+  const name = location.hash.replace(/^#/, "");
+  if (SCREEN_NAMES.includes(name)) navigate(name, { hash: false });
+});
+
 $("dev-auth").addEventListener("submit", async event => {
   event.preventDefault();
   try {
@@ -850,6 +1405,14 @@ $("dev-console").addEventListener("click", async event => {
       state.companies.forEach(company => { company.shares = 0; });
       render();
       $("dev-feedback").textContent = "Player reset to the starting balance.";
+    } else if (button.dataset.devAction === "run-reset") {
+      await developerRequest("/api/dev/run", { action: "reset" });
+      runState = null;
+      lastRoundResult = null;
+      scoreRenderKey = "";
+      await loadClassicAccount();
+      await navigate("menu");
+      $("dev-feedback").textContent = "Run cleared.";
     } else if (button.dataset.devAction === "delete") {
       const name = $("dev-delete-name").value.trim();
       if (!name) throw new Error("Enter an account name first.");
@@ -876,9 +1439,12 @@ $("name-form").addEventListener("submit", event => {
   claimName($("name-input").value.trim(), $("password-input").value);
 });
 newGame();
+renderMenu();
+setScreen("menu");
 connectToMarket();
 loadPlayer();
 loadDailySummary();
+setInterval(renderLeaderboard, 30000);
 
 if (savedPlayerName) $("name-input").value = savedPlayerName;
 
@@ -898,8 +1464,8 @@ async function claimName(name, password) {
     localStorage.setItem("pocket-market-player-name", result.name);
     $("name-error").textContent = "";
     $("identity-gate").hidden = true;
-    loadDeveloperAccess();
+    await loadPlayer();
   } catch {
-    setMessage("Could not reach the server.");
+    $("name-error").textContent = "Could not reach the server.";
   }
 }
