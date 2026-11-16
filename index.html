@@ -3,18 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-16-window">
+  <link rel="stylesheet" href="style.css?v=2026-11-16-editorial">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
   <div id="identity-gate" class="identity-gate">
     <div class="identity-card">
+      <p class="kicker">Shared market · Fake money</p>
       <h1 id="auth-title">Create your account</h1>
       <p id="auth-copy">Pick a name and a password. No email, no real money.</p>
       <form id="name-form">
-        <input id="name-input" type="text" maxlength="16" minlength="3" required autocomplete="nickname" placeholder="Your name">
-        <input id="password-input" type="password" minlength="8" maxlength="128" required autocomplete="new-password" placeholder="Password">
+        <label class="field">
+          <span>Name</span>
+          <input id="name-input" type="text" maxlength="16" minlength="3" required autocomplete="nickname" placeholder="Three to sixteen characters">
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="password-input" type="password" minlength="8" maxlength="128" required autocomplete="new-password" placeholder="Eight characters or more">
+        </label>
         <button id="auth-submit" type="submit">Create account</button>
       </form>
       <button id="auth-toggle" type="button" class="link-button">Already have an account? Log in</button>
@@ -23,41 +31,72 @@
   </div>
   <main>
     <header class="masthead">
-      <div>
+      <div class="brand">
+        <p class="kicker">Shared market · Fake money</p>
         <h1>Pocket Market</h1>
-        <p class="subtitle">Four companies, one shared board, fake money. Every order moves the price, and the whole board ticks every 15 seconds.</p>
+        <p class="subtitle">Four companies trade on one board. Every order moves the price; the board reprices every 15 seconds.</p>
       </div>
       <div class="masthead-side">
-        <div class="live-badge"><span class="live-dot"></span> Live market</div>
+        <p class="tape-status"><span class="live-dot"></span>Tape live</p>
         <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Sound" aria-pressed="true">Sound: on</button>
       </div>
     </header>
+
     <div class="tick-strip" aria-hidden="true">
       <div class="tick-meter"><span id="tick-fill"></span></div>
       <span id="tick-count">Move in 15.0s</span>
     </div>
-    <section class="status" aria-live="polite">
-      <strong>Day <span id="day">1</span> / 365</strong>
-      <span>Cash: $<span id="cash">10,000.00</span></span>
-      <span>Portfolio: $<span id="portfolio">10,000.00</span></span>
-      <span>Total: $<span id="total">10,000.00</span></span>
-      <span>P/L: <span id="profit-loss">$0.00</span></span>
-      <span>Mood: <span id="sentiment">Neutral</span></span>
-    </section>
 
-    <p id="message">Pick a company, enter a share count, and trade. Every order nudges the price; big ones shove it.</p>
+    <dl class="ledger">
+      <div class="ledger-cell">
+        <dt>Day</dt>
+        <dd><span id="day">1</span><span class="of">/ 365</span></dd>
+      </div>
+      <div class="ledger-cell">
+        <dt>Cash</dt>
+        <dd>$<span id="cash">10,000.00</span></dd>
+      </div>
+      <div class="ledger-cell">
+        <dt>Holdings</dt>
+        <dd>$<span id="portfolio">10,000.00</span></dd>
+      </div>
+      <div class="ledger-cell">
+        <dt>Net worth</dt>
+        <dd>$<span id="total">10,000.00</span></dd>
+      </div>
+      <div class="ledger-cell">
+        <dt>P/L</dt>
+        <dd><span id="profit-loss">$0.00</span></dd>
+      </div>
+      <div class="ledger-cell">
+        <dt>Sentiment</dt>
+        <dd><span id="sentiment">Neutral</span></dd>
+      </div>
+    </dl>
+
+    <p id="message" aria-live="polite">Choose a company and place an order.</p>
 
     <section class="market-section">
       <div class="section-heading">
-        <h2>Today’s market</h2>
-        <span class="section-note">Bigger orders move the price further</span>
+        <h2>The board</h2>
+        <span class="section-note">Bigger orders move the price further.</span>
       </div>
-      <table class="market-table">
-      <thead>
-        <tr><th>Company</th><th>Price</th><th>Change</th><th>Owned</th><th>Value</th><th>P/L</th><th>Trade</th></tr>
-      </thead>
-      <tbody id="market"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="market-table">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th class="num">Price</th>
+              <th class="num">Change</th>
+              <th class="num">Owned</th>
+              <th class="num col-detail">Value</th>
+              <th class="num col-detail">P/L</th>
+              <th>Order</th>
+            </tr>
+          </thead>
+          <tbody id="market"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="chart-panel">
@@ -69,12 +108,14 @@
             <button type="button" class="chart-tab" data-range="week" aria-pressed="false">Week</button>
             <button type="button" class="chart-tab" data-range="all" aria-pressed="false">All</button>
           </div>
-          <label for="chart-stock">View <select id="chart-stock">
-            <option value="MTA">Moon Taco (MTA)</option>
-            <option value="PXP">PixelPets (PXP)</option>
-            <option value="RMP">RoboMop (RMP)</option>
-            <option value="CLD">Cloudy Soda (CLD)</option>
-          </select></label>
+          <label for="chart-stock" class="chart-select">View
+            <select id="chart-stock">
+              <option value="MTA">Moon Taco (MTA)</option>
+              <option value="PXP">PixelPets (PXP)</option>
+              <option value="RMP">RoboMop (RMP)</option>
+              <option value="CLD">Cloudy Soda (CLD)</option>
+            </select>
+          </label>
         </div>
       </div>
       <canvas id="price-chart" width="860" height="260" aria-label="Selected stock price history"></canvas>
@@ -82,8 +123,8 @@
     </section>
 
     <div class="lower-grid">
-      <section>
-        <h2>Market news</h2>
+      <section class="news-column">
+        <h2>Dispatches</h2>
         <article id="featured-news" class="featured-news">
           <h3 id="news-headline">All quiet on the board.</h3>
           <p id="news-detail">Company and market events land here the moment they happen.</p>
@@ -93,12 +134,17 @@
         </div>
       </section>
 
-      <section>
+      <section class="board-column">
         <h2>Daily leaderboard</h2>
-        <ol id="leaderboard"><li>No scores yet today.</li></ol>
+        <ol id="leaderboard"><li class="empty">No scores yet today.</li></ol>
       </section>
     </div>
+
+    <footer class="colophon">
+      <p>Pocket Market is a game. No real money, no cash-out, no financial advice.</p>
+    </footer>
   </main>
+
   <aside id="dev-console" hidden>
     <div class="dev-head">
       <strong>DEV DASHBOARD</strong>
@@ -164,6 +210,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-16-window"></script>
+  <script src="game.js?v=2026-11-16-editorial"></script>
 </body>
 </html>

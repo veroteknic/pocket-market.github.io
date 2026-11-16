@@ -336,12 +336,12 @@ function render() {
   setRollingMoney("profit-loss", totalProfitLoss(), true);
   $("market").innerHTML = state.companies.map((company, index) => `
     <tr data-ticker="${company.ticker}">
-      <td><strong>${company.name}</strong> (${company.ticker})</td>
-      <td>$${money(company.price)}</td>
-      <td>${changeMarkup(priceChange(company.ticker, company.price))}</td>
-      <td>${company.shares}</td>
-      <td>$${money(company.price * company.shares)}</td>
-      <td>${profitMarkup(unrealizedProfit(company))}</td>
+      <td class="company"><span class="company-name">${company.name}</span><span class="ticker">${company.ticker}</span></td>
+      <td class="num price" data-label="Price">$${money(company.price)}</td>
+      <td class="num" data-label="Change">${changeMarkup(priceChange(company.ticker, company.price))}</td>
+      <td class="num" data-label="Owned">${company.shares}</td>
+      <td class="num col-detail">$${money(company.price * company.shares)}</td>
+      <td class="num col-detail">${profitMarkup(unrealizedProfit(company))}</td>
       <td class="trade">
         <input id="amount-${index}" type="number" min="1" value="1" aria-label="Shares of ${company.name}">
         <button data-action="buy" data-index="${index}" ${pendingTrade ? "disabled" : ""}>Buy</button>
@@ -475,13 +475,13 @@ function drawChart() {
   const plotHeight = height - top - bottom;
 
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#1b1710";
+  ctx.fillStyle = "#14120e";
   ctx.fillRect(0, 0, width, height);
 
-  ctx.font = "11px Segoe UI, Arial, sans-serif";
+  ctx.font = "10px Consolas, \"Liberation Mono\", monospace";
   ctx.textBaseline = "middle";
-  ctx.strokeStyle = "#3d3324";
-  ctx.fillStyle = "#c8b897";
+  ctx.strokeStyle = "#262119";
+  ctx.fillStyle = "#a3937a";
   ctx.lineWidth = 1;
   for (let index = 0; index <= 4; index += 1) {
     const y = top + (index / 4) * plotHeight;
@@ -490,7 +490,7 @@ function drawChart() {
     ctx.lineTo(width - right, y);
     ctx.stroke();
   }
-  ctx.strokeStyle = "#75603d";
+  ctx.strokeStyle = "#3a3224";
   ctx.beginPath();
   ctx.moveTo(left, top);
   ctx.lineTo(left, height - bottom);
@@ -498,7 +498,7 @@ function drawChart() {
   ctx.stroke();
 
   if (points.length < 2) {
-    ctx.fillStyle = "#c8b897";
+    ctx.fillStyle = "#a3937a";
     ctx.textAlign = "center";
     ctx.fillText("Waiting for ticks in this range…", left + plotWidth / 2, top + plotHeight / 2);
     ctx.textAlign = "left";
@@ -519,7 +519,7 @@ function drawChart() {
   const xFor = point => left + Math.max(0, Math.min(1, (point.time - view.start) / span)) * plotWidth;
   const yFor = price => top + (1 - (price - min) / range) * plotHeight;
 
-  ctx.fillStyle = "#c8b897";
+  ctx.fillStyle = "#a3937a";
   ctx.textAlign = "right";
   for (let index = 0; index <= 4; index += 1) {
     const value = max - (index / 4) * range;
@@ -535,7 +535,7 @@ function drawChart() {
 
   const coverage = (points[points.length - 1].time - points[0].time) / span;
   if (coverage < 0.04) {
-    ctx.fillStyle = "#c8b897";
+    ctx.fillStyle = "#a3937a";
     ctx.textAlign = "center";
     ctx.fillText("History is younger than this range.", left + plotWidth / 2, top + plotHeight / 2);
     ctx.textAlign = "left";
@@ -543,7 +543,7 @@ function drawChart() {
 
   const last = points[points.length - 1];
   const first = points[0];
-  const trendColor = last.price >= first.price ? "#62edac" : "#ff5c7d";
+  const trendColor = last.price >= first.price ? "#5fe0a0" : "#ff6b84";
   const line = points.map(point => ({ x: xFor(point), y: yFor(point.price) }));
 
   ctx.beginPath();
@@ -552,8 +552,8 @@ function drawChart() {
   ctx.lineTo(line[line.length - 1].x, height - bottom);
   ctx.closePath();
   const area = ctx.createLinearGradient(0, top, 0, height - bottom);
-  area.addColorStop(0, last.price >= first.price ? "rgba(98, 237, 172, 0.24)" : "rgba(255, 92, 125, 0.22)");
-  area.addColorStop(1, "rgba(27, 23, 16, 0)");
+  area.addColorStop(0, last.price >= first.price ? "rgba(95, 224, 160, 0.18)" : "rgba(255, 107, 132, 0.16)");
+  area.addColorStop(1, "rgba(20, 18, 14, 0)");
   ctx.fillStyle = area;
   ctx.fill();
 
@@ -569,8 +569,8 @@ function drawChart() {
 
   const endpoint = line[line.length - 1];
   ctx.beginPath();
-  ctx.arc(endpoint.x, endpoint.y, 5, 0, Math.PI * 2);
-  ctx.fillStyle = "#1b1710";
+  ctx.arc(endpoint.x, endpoint.y, 4, 0, Math.PI * 2);
+  ctx.fillStyle = "#14120e";
   ctx.fill();
   ctx.strokeStyle = trendColor;
   ctx.lineWidth = 3;
@@ -774,24 +774,34 @@ async function renderLeaderboard() {
     list.replaceChildren();
     if (!scores.length) {
       const empty = document.createElement("li");
+      empty.className = "empty";
       empty.textContent = "No scores yet today.";
       list.append(empty);
       return;
     }
     scores.forEach((entry, index) => {
       const item = document.createElement("li");
-      const player = document.createElement("strong");
-      player.textContent = `${index + 1}. ${entry.name}`;
-      const movement = entry.rankChange > 0 ? `▲ ${entry.rankChange}` : entry.rankChange < 0 ? `▼ ${Math.abs(entry.rankChange)}` : "—";
-      const detail = document.createElement("small");
-      detail.textContent = ` — $${money(entry.score)} ${movement}`;
-      item.append(player, detail);
+      const rank = document.createElement("span");
+      rank.className = "rank";
+      rank.textContent = String(index + 1).padStart(2, "0");
+      const player = document.createElement("span");
+      player.className = "name";
+      player.textContent = entry.name;
+      const detail = document.createElement("span");
+      detail.className = "score";
+      detail.textContent = `$${money(entry.score)}`;
+      const movement = document.createElement("span");
+      movement.className = `move ${entry.rankChange > 0 ? "up" : entry.rankChange < 0 ? "down" : "neutral"}`;
+      movement.textContent = entry.rankChange > 0 ? `▲${entry.rankChange}` : entry.rankChange < 0 ? `▼${Math.abs(entry.rankChange)}` : "—";
+      movement.title = entry.rankChange === 0 ? "No rank change" : `${Math.abs(entry.rankChange)} place${Math.abs(entry.rankChange) === 1 ? "" : "s"} ${entry.rankChange > 0 ? "up" : "down"}`;
+      item.append(rank, player, detail, movement);
       list.append(item);
     });
   } catch {
     const list = $("leaderboard");
     list.replaceChildren();
     const error = document.createElement("li");
+    error.className = "empty";
     error.textContent = "Leaderboard unavailable.";
     list.append(error);
   }
