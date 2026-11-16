@@ -424,11 +424,27 @@ function setChartRange(range) {
   drawChart();
 }
 
+// The tab can look inert while the record is younger than the range, so the
+// chart states how much it is actually covering.
+function chartSpanNote(points) {
+  if (!points.length) return "No ticks in this range yet.";
+  if (points.length === 1) return "1 point so far.";
+  const spanMs = points[points.length - 1].time - points[0].time;
+  const minutes = spanMs / 60000;
+  const span = minutes < 90
+    ? `${Math.max(1, Math.round(minutes))}m`
+    : spanMs < 48 * 3600000
+      ? `${(spanMs / 3600000).toFixed(1)}h`
+      : `${(spanMs / 86400000).toFixed(1)}d`;
+  return `${points.length} points · ${span}`;
+}
+
 function drawChart() {
   const canvas = $("price-chart");
   if (!canvas) return;
   const ticker = $("chart-stock").value;
   const points = chartPoints(ticker);
+  $("chart-span").textContent = chartSpanNote(points);
   const ctx = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
