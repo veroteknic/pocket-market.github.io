@@ -141,24 +141,10 @@ main {
   padding-bottom: 22px;
   border-bottom: 1px solid var(--line-bright);
 }
-.kicker {
-  margin: 0 0 12px;
-  color: var(--brass);
-  font: 600 10px/1 var(--mono);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
 h1 {
   margin: 0;
-  font: 600 clamp(34px, 5vw, 46px)/0.98 var(--display);
+  font: 600 clamp(38px, 6vw, 54px)/0.98 var(--display);
   letter-spacing: -0.025em;
-}
-.subtitle {
-  max-width: 56ch;
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.5;
 }
 .masthead-side {
   display: flex;
@@ -166,22 +152,6 @@ h1 {
   align-items: flex-end;
   gap: 12px;
   padding-bottom: 3px;
-}
-.tape-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  color: var(--muted);
-  font: 600 10px/1 var(--mono);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 1px;
-  background: var(--green);
 }
 .sound-toggle {
   padding: 6px 10px;
@@ -216,7 +186,7 @@ h1 {
 }
 #tick-count {
   flex: 0 0 auto;
-  min-width: 112px;
+  min-width: 48px;
   color: var(--faint);
   text-align: right;
   font: 600 10px/1 var(--mono);
@@ -264,21 +234,12 @@ h1 {
 .ledger .neutral { color: var(--muted); }
 
 #message {
-  min-height: 21px;
   margin: 14px 0 0;
   color: var(--muted);
   font: 12px/1.6 var(--mono);
   letter-spacing: 0.01em;
 }
-.event-alert {
-  display: block;
-  padding: 10px 0 10px 14px;
-  border-left: 2px solid var(--brass);
-  color: var(--ink) !important;
-  font: 600 14px/1.45 var(--mono) !important;
-}
-.event-alert.boom { border-left-color: var(--green); color: var(--green) !important; }
-.event-alert.crash { border-left-color: var(--red); color: var(--red) !important; }
+#message:empty { display: none; }
 
 /* ---------- Sections ---------- */
 
@@ -290,18 +251,13 @@ section { margin-top: 34px; }
   gap: 20px;
   padding-bottom: 10px;
   margin-bottom: 0;
-  border-bottom: 1px solid var(--line-strong, var(--line-bright));
+  border-bottom: 1px solid var(--line-strong);
 }
 .compact-heading { align-items: center; }
 h2 {
   margin: 0;
   font: 500 21px/1.2 var(--display);
   letter-spacing: -0.01em;
-}
-.section-note {
-  color: var(--faint);
-  font: 11px/1.4 var(--mono);
-  text-align: right;
 }
 
 /* ---------- The board ---------- */
@@ -441,21 +397,7 @@ button.tap { animation: button-pop 160ms ease-out; }
 .chart-tab:active { transform: none; }
 .chart-tab[aria-pressed="true"] { color: var(--gold); border-bottom-color: var(--gold); }
 .chart-tab[aria-pressed="true"]:hover { color: var(--gold); border-bottom-color: var(--gold); }
-.chart-select {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--faint);
-  font: 10px/1 var(--mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.chart-select select {
-  padding: 5px 7px;
-  font: 11px/1 var(--sans);
-  letter-spacing: 0;
-  text-transform: none;
-}
+#chart-stock { padding: 5px 7px; font: 11px/1 var(--sans); }
 #price-chart {
   display: block;
   width: 100%;
@@ -569,13 +511,7 @@ button.tap { animation: button-pop 160ms ease-out; }
   border-top: 2px solid var(--line-bright);
   border-bottom: 1px solid var(--line);
 }
-.identity-card .kicker { margin-bottom: 10px; }
-.identity-card h1 { font-size: 34px; }
-.identity-card > p:not(.kicker) {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 13.5px;
-}
+.identity-card h1 { font-size: 38px; }
 .identity-card form {
   display: grid;
   gap: 13px;
@@ -615,6 +551,7 @@ button.tap { animation: button-pop 160ms ease-out; }
   color: var(--red);
   font: 11px/1.5 var(--mono);
 }
+.form-error:empty { display: none; }
 [hidden] { display: none !important; }
 
 /* ---------- Developer console ---------- */
@@ -767,17 +704,16 @@ body.dev-open { padding-right: 410px; }
   .masthead-side {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     width: 100%;
     padding-bottom: 0;
   }
-  h1 { font-size: 36px; }
+  h1 { font-size: 40px; }
   .ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ledger-cell { padding: 0 14px; border-left: 1px solid var(--line); }
   .ledger-cell:nth-child(2n + 1) { padding-left: 0; border-left: 0; }
   .ledger dd { font-size: 15px; }
   .section-heading { align-items: flex-start; flex-direction: column; gap: 6px; }
-  .section-note { text-align: left; }
   .compact-heading { align-items: stretch; gap: 12px; }
   .chart-controls { justify-content: space-between; }
 

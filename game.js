@@ -198,7 +198,6 @@ function newGame() {
   state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), tick: 0, tickDeadline: 0, finished: false };
   marketHistory = {};
   render();
-  setMessage(`Live market: Day ${state.day} / ${MAX_DAYS}.`);
   renderLeaderboard();
 }
 
@@ -363,7 +362,7 @@ function renderTickMeter() {
   const left = Math.max(0, state.tickDeadline - Date.now());
   const ratio = Math.min(1, Math.max(0, left / TICK_MS));
   $("tick-fill").style.width = `${ratio * 100}%`;
-  $("tick-count").textContent = left > 0 ? `Move in ${(left / 1000).toFixed(1)}s` : "Moving…";
+  $("tick-count").textContent = `${Math.max(0, left / 1000).toFixed(1)}s`;
   strip.classList.toggle("urgent", left <= 3000);
 }
 setInterval(renderTickMeter, 100);
@@ -446,8 +445,7 @@ function chartAxisLabel(time) {
 // chart states how much it is actually covering.
 function chartSpanNote(points) {
   const label = chartRange === "day" ? "Day" : chartRange === "week" ? "Week" : "All";
-  if (!points.length) return `${label} · no ticks in this range yet.`;
-  if (points.length === 1) return `${label} · 1 point so far.`;
+  if (points.length < 2) return `${label} · ${points.length} point${points.length === 1 ? "" : "s"} · —`;
   const spanMs = points[points.length - 1].time - points[0].time;
   const minutes = spanMs / 60000;
   const span = minutes < 90
@@ -500,7 +498,7 @@ function drawChart() {
   if (points.length < 2) {
     ctx.fillStyle = "#a3937a";
     ctx.textAlign = "center";
-    ctx.fillText("Waiting for ticks in this range…", left + plotWidth / 2, top + plotHeight / 2);
+    ctx.fillText("No data", left + plotWidth / 2, top + plotHeight / 2);
     ctx.textAlign = "left";
     return;
   }
@@ -532,14 +530,6 @@ function drawChart() {
   ctx.textAlign = "right";
   ctx.fillText("Now", width - right, height - 12);
   ctx.textAlign = "left";
-
-  const coverage = (points[points.length - 1].time - points[0].time) / span;
-  if (coverage < 0.04) {
-    ctx.fillStyle = "#a3937a";
-    ctx.textAlign = "center";
-    ctx.fillText("History is younger than this range.", left + plotWidth / 2, top + plotHeight / 2);
-    ctx.textAlign = "left";
-  }
 
   const last = points[points.length - 1];
   const first = points[0];
@@ -590,11 +580,10 @@ function renderDailySummary(summary) {
     : 0;
   const low = summary.low?.[ticker];
   const high = summary.high?.[ticker];
-  const range = Number.isFinite(low) && Number.isFinite(high) ? ` Range: $${money(low)}–$${money(high)}.` : "";
+  const range = Number.isFinite(low) && Number.isFinite(high) ? ` · $${money(low)}–$${money(high)}` : "";
   const direction = move > 0 ? "up" : move < 0 ? "down" : "neutral";
-  const status = summary.inProgress ? "so far" : "closed";
   $("daily-summary").className = direction;
-  $("daily-summary").textContent = `Day ${summary.day} ${status}: ${ticker} is the biggest mover (${move >= 0 ? "+" : ""}${move.toFixed(1)}%).${range}`;
+  $("daily-summary").textContent = `Day ${summary.day} · ${ticker} ${move >= 0 ? "+" : ""}${move.toFixed(1)}%${range}`;
 }
 
 async function loadDailySummary() {
@@ -615,7 +604,7 @@ async function trade(index, action) {
   const amount = Math.floor(Number($(`amount-${index}`).value));
   if (!Number.isFinite(amount) || amount < 1) {
     cue("reject");
-    return setMessage("Enter a whole number of shares.");
+    return setMessage("Whole shares only.");
   }
 
   pendingTrade = { index, action };
@@ -654,7 +643,7 @@ async function trade(index, action) {
     setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}${slipped ? ` · tape moved to $${money(result.marketPrice)}` : ""}.`);
   } catch {
     cue("reject");
-    setMessage("Could not reach the live market server.");
+    setMessage("No connection.");
   } finally {
     pendingTrade = null;
     render();
@@ -686,7 +675,7 @@ function connectToMarket() {
   const socket = new WebSocket(BACKEND_WS_URL);
 
   socket.addEventListener("open", () => {
-    setMessage("Live market connected. Prices are synchronized with everyone.");
+    setMessage("");
   });
 
   socket.addEventListener("message", event => {
@@ -718,16 +707,13 @@ function connectToMarket() {
         cue(update.event.kind === "boom" ? "boom" : "crash");
       }
       $("news-headline").textContent = update.event.headline;
-      $("news-detail").textContent = update.event.detail || "Prices are already moving on this one.";
+      $("news-detail").textContent = update.event.detail || "";
       $("featured-news").classList.remove("boom", "crash");
       $("featured-news").classList.add(update.event.kind);
-      $("message").textContent = update.event.headline;
-      $("message").classList.add("event-alert", update.event.kind);
     } else {
-      $("news-headline").textContent = "All quiet on the board.";
-      $("news-detail").textContent = "Company and market events land here the moment they happen.";
+      $("news-headline").textContent = "—";
+      $("news-detail").textContent = "";
       $("featured-news").classList.remove("boom", "crash");
-      $("message").classList.remove("event-alert", "boom", "crash");
     }
 
     const previousPrices = state.companies.map(company => company.price);
@@ -755,14 +741,14 @@ function connectToMarket() {
   });
 
   socket.addEventListener("error", () => {
-    setMessage("Live market is unavailable. Refresh to reconnect.");
+    setMessage("Market unavailable.");
   });
 
   socket.addEventListener("close", () => {
     state.tick = 0;
     state.tickDeadline = 0;
     renderTickMeter();
-    if (!state.finished) setMessage("Live market disconnected.");
+    if (!state.finished) setMessage("Disconnected.");
   });
 }
 
@@ -775,7 +761,7 @@ async function renderLeaderboard() {
     if (!scores.length) {
       const empty = document.createElement("li");
       empty.className = "empty";
-      empty.textContent = "No scores yet today.";
+      empty.textContent = "—";
       list.append(empty);
       return;
     }
@@ -880,10 +866,9 @@ $("dev-console").addEventListener("click", async event => {
 let authMode = "register";
 $("auth-toggle").addEventListener("click", () => {
   authMode = authMode === "register" ? "login" : "register";
-  $("auth-title").textContent = authMode === "register" ? "Create your account" : "Log in to Pocket Market";
-  $("auth-copy").textContent = authMode === "register" ? "Pick a name and a password. No email, no real money." : "Use the name and password you signed up with.";
+  $("auth-title").textContent = authMode === "register" ? "Create account" : "Log in";
   $("auth-submit").textContent = authMode === "register" ? "Create account" : "Log in";
-  $("auth-toggle").textContent = authMode === "register" ? "Already have an account? Log in" : "Need an account? Create one";
+  $("auth-toggle").textContent = authMode === "register" ? "Log in instead" : "Create an account";
   $("password-input").autocomplete = authMode === "register" ? "new-password" : "current-password";
 });
 $("name-form").addEventListener("submit", event => {
@@ -914,8 +899,7 @@ async function claimName(name, password) {
     $("name-error").textContent = "";
     $("identity-gate").hidden = true;
     loadDeveloperAccess();
-    setMessage(`Welcome, ${result.name}.`);
   } catch {
-    setMessage("Could not check that name. Try again.");
+    setMessage("Could not reach the server.");
   }
 }
