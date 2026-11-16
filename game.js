@@ -193,7 +193,7 @@ document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
 
 function newGame() {
-  state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), updatedAt: 0, clockSkew: null, finished: false };
+  state = { day: getCurrentDayOfYear(), cash: STARTING_CASH, companies: companies.map(company => ({ ...company })), tick: 0, tickDeadline: 0, finished: false };
   marketHistory = {};
   render();
   setMessage(`Live market: Day ${state.day} / ${MAX_DAYS}.`);
@@ -350,15 +350,15 @@ function render() {
 }
 
 // The next repricing is the only timer in the game, so it gets its own strip.
-// Remaining time is derived from the server's last tick (with a one-time clock
-// skew offset) rather than counting down blindly from page load.
+// The deadline is anchored to the arrival of each real tick rather than the
+// local clock, and the first frame interpolates from the server's last tick.
 function renderTickMeter() {
   const strip = document.querySelector(".tick-strip");
   if (!strip || !state) return;
-  const live = state.updatedAt > 0;
+  const live = state.tickDeadline > 0;
   strip.hidden = !live;
   if (!live) return;
-  const left = Math.max(0, state.updatedAt + TICK_MS - (Date.now() - (state.clockSkew || 0)));
+  const left = Math.max(0, state.tickDeadline - Date.now());
   const ratio = Math.min(1, Math.max(0, left / TICK_MS));
   $("tick-fill").style.width = `${ratio * 100}%`;
   $("tick-count").textContent = left > 0 ? `Move in ${(left / 1000).toFixed(1)}s` : "Moving…";
@@ -633,12 +633,16 @@ function connectToMarket() {
     }
 
     const previousPrices = state.companies.map(company => company.price);
-    const hadLiveState = state.updatedAt > 0;
-    if (typeof update.updatedAt === "number") {
-      // One fixed offset keeps the tick strip honest even when the local clock
-      // is off; network latency on the first frame is a few milliseconds.
-      if (state.clockSkew == null) state.clockSkew = Date.now() - update.updatedAt;
-      state.updatedAt = update.updatedAt;
+    const hadLiveState = state.tick > 0;
+    if (typeof update.tick === "number") {
+      if (!state.tickDeadline) {
+        // The first frame is a snapshot: interpolate what is left of the cycle.
+        const remaining = Math.max(0, Math.min(TICK_MS, (update.updatedAt || Date.now()) + TICK_MS - Date.now()));
+        state.tickDeadline = Date.now() + remaining;
+      } else if (update.tick !== state.tick) {
+        state.tickDeadline = Date.now() + TICK_MS;
+      }
+      state.tick = update.tick;
     }
 
     state.companies.forEach(company => {
@@ -657,7 +661,8 @@ function connectToMarket() {
   });
 
   socket.addEventListener("close", () => {
-    state.updatedAt = 0;
+    state.tick = 0;
+    state.tickDeadline = 0;
     renderTickMeter();
     if (!state.finished) setMessage("Live market disconnected.");
   });
