@@ -7,7 +7,7 @@ const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
 const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
 const RUN_RULES_FALLBACK = { antes: 8, roundsPerAnte: 3, startingCash: 10000 };
-const SCREEN_NAMES = ["menu", "floor", "score", "results"];
+const SCREEN_NAMES = ["menu", "floor", "score", "results", "collection"];
 let runRules = { ...RUN_RULES_FALLBACK };
 let runState = null;
 let lastRoundResult = null;
@@ -16,6 +16,7 @@ let activeScreen = "menu";
 let runBusy = false;
 let scoreAnimationToken = 0;
 let scoreRenderKey = "";
+let jokerCatalog = null;
 
 function updateDevConsole(data) {
   if (!isDeveloper()) return;
@@ -733,6 +734,7 @@ async function loadPlayer() {
     const player = await response.json();
     localStorage.setItem("pocket-market-player-name", player.name);
     applyAccount(player);
+    await loadJokerCatalog();
     $("identity-gate").hidden = true;
     loadDeveloperAccess();
     await loadRunState();
@@ -908,6 +910,7 @@ function renderMenu() {
   const line = $("menu-run-line");
   const resultsButton = $("menu-results");
   const classicButton = $("menu-classic");
+  const collectionButton = $("menu-collection");
   const primary = $("menu-primary");
   const label = $("menu-primary-label");
   const note = $("menu-primary-note");
@@ -918,6 +921,8 @@ function renderMenu() {
   rules.hidden = false;
   resultsButton.hidden = true;
   classicButton.hidden = false;
+  collectionButton.hidden = false;
+  collectionButton.disabled = runBusy;
   primary.disabled = runBusy;
 
   if (!runState) {
@@ -1133,6 +1138,61 @@ function renderResultsScreen() {
   return true;
 }
 
+async function loadJokerCatalog() {
+  if (jokerCatalog) return jokerCatalog;
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/jokers`, { credentials: "include" });
+    if (!response.ok) return null;
+    jokerCatalog = await response.json();
+    return jokerCatalog;
+  } catch {
+    return null;
+  }
+}
+
+function renderCollectionScreen() {
+  const grid = $("collection-grid");
+  const count = $("collection-count");
+  const empty = $("collection-empty");
+  if (!grid) return false;
+  if (!jokerCatalog) {
+    grid.replaceChildren();
+    count.textContent = "—";
+    empty.hidden = false;
+    return true;
+  }
+  empty.hidden = true;
+  count.textContent = `${jokerCatalog.jokers.length} jokers`;
+  grid.replaceChildren();
+  const byRarity = {};
+  for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
+    byRarity[rarity] = jokerCatalog.jokers.filter(joker => joker.rarity === rarity);
+  }
+  let any = false;
+  for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
+    const group = byRarity[rarity];
+    if (!group.length) continue;
+    const header = document.createElement("h3");
+    header.className = "collection-rarity";
+    header.textContent = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+    grid.append(header);
+    for (const joker of group) {
+      const card = document.createElement("article");
+      card.className = "joker-card";
+      card.dataset.rarity = rarity;
+      card.innerHTML = `
+        <div class="joker-glyph">${joker.glyph}</div>
+        <h3 class="joker-name">${joker.name}</h3>
+        <span class="joker-rarity">${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</span>
+        <p class="joker-desc">${joker.description}</p>
+      `;
+      grid.append(card);
+      any = true;
+    }
+  }
+  return true;
+}
+
 async function runRequest(path) {
   const response = await fetch(`${BACKEND_HTTP_URL}${path}`, { method: "POST", credentials: "include" });
   const data = await response.json().catch(() => ({}));
@@ -1205,6 +1265,10 @@ async function navigate(name, { hash = true } = {}) {
       name = "menu";
       renderMenu();
     }
+    if (name === "collection" && !renderCollectionScreen()) {
+      name = "menu";
+      renderMenu();
+    }
     setScreen(name);
   }
 
@@ -1221,6 +1285,10 @@ async function routeAfterAuth() {
   }
   if (hash === "floor") {
     await navigate("floor");
+    return;
+  }
+  if (hash === "collection") {
+    await navigate("collection");
     return;
   }
   if (!runState) {
@@ -1347,11 +1415,13 @@ $("menu-primary").addEventListener("click", () => {
 });
 $("menu-results").addEventListener("click", () => navigate("results"));
 $("menu-classic").addEventListener("click", () => navigate("floor"));
+$("menu-collection").addEventListener("click", () => navigate("collection"));
 $("score-menu").addEventListener("click", () => navigate("menu"));
 $("score-next").addEventListener("click", advanceRunRound);
 $("results-new-run").addEventListener("click", startRun);
 $("results-classic").addEventListener("click", () => navigate("floor"));
 $("results-menu").addEventListener("click", () => navigate("menu"));
+$("collection-back").addEventListener("click", () => navigate("menu"));
 window.addEventListener("hashchange", () => {
   const name = location.hash.replace(/^#/, "");
   if (SCREEN_NAMES.includes(name)) navigate(name, { hash: false });

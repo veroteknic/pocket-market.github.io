@@ -46,6 +46,7 @@
             <span id="menu-primary-label">Start run</span>
             <span id="menu-primary-note" class="menu-action-note">$10,000 bankroll</span>
           </button>
+          <button id="menu-collection" class="menu-action" type="button">Collection</button>
           <button id="menu-results" class="menu-action" type="button" hidden>View results</button>
           <button id="menu-classic" class="menu-action" type="button">Classic board</button>
         </nav>
@@ -233,6 +234,18 @@
           <button id="results-classic" type="button">Classic board</button>
           <button id="results-menu" class="link-button" type="button">Menu</button>
         </div>
+      </div>
+    </section>
+
+    <section id="screen-collection" class="screen screen-collection" data-screen="collection" hidden>
+      <div class="collection-shell">
+        <header class="collection-head">
+          <button id="collection-back" class="link-button" type="button">Menu</button>
+          <h2 class="collection-title">Collection</h2>
+          <p id="collection-count" class="collection-count">— jokers</p>
+        </header>
+        <div id="collection-grid" class="collection-grid"></div>
+        <p id="collection-empty" class="collection-empty" hidden>—</p>
       </div>
     </section>
   </main>

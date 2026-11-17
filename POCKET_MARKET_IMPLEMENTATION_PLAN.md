@@ -894,7 +894,7 @@ implementation can start immediately if approved.
 | 2 — Visual foundation | **Partial** | Editorial screen shell, menu, run strip, score and results layouts. Card/rarity system still to come. |
 | 3 — Core gameplay | **Basic slice working** | Deterministic `chips × mult` scoring, targets, failure, progression, scoring screen and tests. |
 | 4 — Trading integration | **Basic slice working** | Run portfolio routes through the existing trade endpoint; shared market, slippage and broadcast preserved. |
-| 5 — Joker system | Not started | Depends on 3 engine and 4 snapshot. |
+| 5 — Joker system | **5A complete** | Catalog module `worker/src/jokers.ts`: 20 jokers, five rarities, pure effect engine, `/api/jokers` endpoint. Collection screen on the menu: read-only catalog grid with rarity bands, glyphs, and minimalist card styling. 27 Worker tests pass. |
 | 6 — Shop and consumables | Not started | Depends on 5 catalog and 1B save. |
 | 7 — Boss rounds and events | Not started | Depends on 3, 5, 6. |
 | 8 — Polish | Partial | Screen transitions, score reveal and reduced-motion support; further polish after mechanics stabilize. |
