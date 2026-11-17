@@ -2,11 +2,16 @@ import { DurableObject } from "cloudflare:workers";
 import {
   advanceRun,
   createRun,
+  isBossRound,
+  bossForAnte,
   lockRound,
   migrateRun,
   portfolioValue,
   retireRun,
   RUN_RULES,
+  type PurchaseEvent,
+  PURCHASE_EVENT_CHANCE,
+  PURCHASE_EVENTS,
   type RunSaveV1,
 } from "./run.ts";
 import {
@@ -56,7 +61,7 @@ type StoredDailyRanks = DailyRanks | Record<string, number>;
 type MarketEvent = {
   headline: string;
   detail: string;
-  kind: "boom" | "crash";
+  kind: "boom" | "crash" | "bull" | "flatline";
   effect: number;
   expiresAt: number;
   scope: "market" | "company";
@@ -443,9 +448,9 @@ export class Market extends DurableObject {
     const run = await this.getRun(playerId);
     if (!run) throw new Error("No active run");
     const market = await this.getMarket();
-    const locked = lockRound(run, market.prices, market.tick);
+    const locked = lockRound(run, market.prices, market.tick, Date.now(), market.event);
     await this.ctx.storage.put(`run:${playerId}`, locked.run);
-    return locked;
+    return { ...locked, boss: isBossRound(run.ante, run.round) ? bossForAnte(run.ante) : undefined };
   }
 
   async advancePlayerRun(playerId: string): Promise<RunSaveV1> {
@@ -465,7 +470,7 @@ export class Market extends DurableObject {
     return next;
   }
 
-  async purchaseJoker(playerId: string, jokerId: string): Promise<{ run: RunSaveV1; shop: ShopState; joker: Joker | undefined }> {
+  async purchaseJoker(playerId: string, jokerId: string): Promise<{ run: RunSaveV1; shop: ShopState; joker: Joker | undefined; marketEvent?: PurchaseEvent }> {
     const run = await this.getRun(playerId);
     if (!run) throw new Error("No active run");
     const state: ShopState = {
@@ -477,6 +482,29 @@ export class Market extends DurableObject {
     const next = applyPurchase(state, jokerId);
     if (!next) throw new Error("Purchase rejected");
     const joker = JOKER_CATALOG.find(j => j.id === jokerId);
+
+    // One in four purchases shakes the shared market for every player.
+    let marketEvent: PurchaseEvent | undefined;
+    if (Math.random() < PURCHASE_EVENT_CHANCE) {
+      marketEvent = PURCHASE_EVENTS[Math.floor(Math.random() * PURCHASE_EVENTS.length)];
+      const market = await this.getMarket();
+      const expiresAt = Date.now() + marketEvent.durationTicks * TICK_MS;
+      const nextMarket: MarketState = {
+        ...market,
+        event: {
+          headline: marketEvent.headline,
+          detail: marketEvent.detail,
+          kind: marketEvent.kind,
+          effect: marketEvent.effect,
+          expiresAt,
+          scope: "market",
+        },
+        updatedAt: Date.now(),
+      };
+      await this.ctx.storage.put("market", nextMarket);
+      this.broadcast(nextMarket);
+    }
+
     const updated: RunSaveV1 = {
       ...run,
       shopCurrency: next.currency,
@@ -486,7 +514,7 @@ export class Market extends DurableObject {
       updatedAt: Date.now(),
     };
     await this.ctx.storage.put(`run:${playerId}`, updated);
-    return { run: updated, shop: next, joker };
+    return { run: updated, shop: next, joker, marketEvent };
   }
 
   async rerollShop(playerId: string): Promise<{ run: RunSaveV1; shop: ShopState }> {

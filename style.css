@@ -662,6 +662,16 @@ button.tap { animation: button-pop 160ms ease-out; }
   text-transform: none;
 }
 .run-retire:hover { border-bottom-color: var(--red); background: none; color: var(--red); transform: none; }
+.run-strip.boss-round { border: 1px solid var(--brass); border-radius: 4px; }
+.run-strip.boss-round .run-cell.boss-cell { color: var(--brass); border-color: var(--brass); }
+.run-strip.boss-round .run-cell.boss-cell strong { color: var(--gold); }
+.score-boss {
+  margin: 8px 0 0;
+  color: var(--gold);
+  font: 600 11px/1.4 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
 
 /* ---------- Scoring ---------- */
 

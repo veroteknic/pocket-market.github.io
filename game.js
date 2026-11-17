@@ -18,6 +18,8 @@ let scoreAnimationToken = 0;
 let scoreRenderKey = "";
 let jokerCatalog = null;
 let shopState = null;
+let lastBoss = null;
+let pendingMarketEvent = null;
 
 function updateDevConsole(data) {
   if (!isDeveloper()) return;
@@ -904,9 +906,24 @@ function renderRunStrip() {
   $("run-preview-formula").textContent = preview ? `${preview.chips.toLocaleString()} × ${preview.mult}` : "—";
   strip.classList.toggle("pass", Boolean(preview && preview.score >= runState.target));
   $("run-lock").disabled = runBusy;
+
+  const bossEl = $("run-boss");
+  const bossNameEl = $("run-boss-name");
+  const isBoss = runState.round === runRules.roundsPerAnte;
+  const boss = isBoss && lastBoss ? lastBoss : null;
+  if (boss) {
+    bossEl.hidden = false;
+    bossNameEl.textContent = boss.name;
+    bossEl.className = "run-cell boss-cell";
+    strip.classList.add("boss-round");
+  } else {
+    bossEl.hidden = true;
+    strip.classList.remove("boss-round");
+  }
 }
 
 function renderMenu() {
+  lastBoss = null;
   const summary = $("menu-summary");
   const rules = $("menu-rules");
   const line = $("menu-run-line");
@@ -1058,6 +1075,14 @@ function playScoreSequence(result) {
 function renderScoreScreen() {
   const result = currentRoundResult();
   if (!result) return false;
+  const isBoss = result.round === runRules.roundsPerAnte;
+  const bossEl = $("score-boss");
+  if (lastBoss && isBoss) {
+    bossEl.hidden = false;
+    bossEl.textContent = `Boss round — ${lastBoss.name}: ${lastBoss.detail}`;
+  } else {
+    bossEl.hidden = true;
+  }
   $("score-round").textContent = `Ante ${result.ante} · Round ${result.round}`;
   $("score-target").textContent = Number(result.target).toLocaleString();
   const list = $("score-effects");
@@ -1427,6 +1452,7 @@ async function lockRunRound() {
   try {
     const data = await runRequest("/api/run/round/lock");
     runState = data.run;
+    lastBoss = data.boss || null;
     lastRoundResult = data.result || runState.roundHistory?.[runState.roundHistory.length - 1] || null;
     scoreRenderKey = "";
     applyRunAccount();
@@ -1498,6 +1524,11 @@ async function purchaseJoker(jokerId) {
     runRulesFrom(data);
     shopState = data.shop || null;
     runState = data.run || null;
+    if (data.marketEvent) {
+      pendingMarketEvent = data.marketEvent;
+      setMessage(`${data.marketEvent.headline} ${data.marketEvent.detail}`);
+      cue("fail");
+    }
     renderShopScreen();
     renderMenu();
   } catch (error) {
