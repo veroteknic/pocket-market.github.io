@@ -2,6 +2,8 @@
 // This module is intentionally free of Cloudflare imports so the rules can be
 // tested with `node --test` and reused by any client.
 
+import { type ShopOffer, SHOP_STARTING_CURRENCY, SHOP_ROUND_REWARD, applyJokerEffects } from "./jokers.ts";
+
 export const TICKERS = ["MTA", "PXP", "RMP", "CLD"] as const;
 export type Ticker = (typeof TICKERS)[number];
 export type Prices = Record<Ticker, number>;
@@ -69,6 +71,14 @@ export type RunSaveV1 = {
 
   seed: number;
   roundHistory: RoundResultV1[];
+
+  // Roguelike shop economy. Currency is separate from real cash and cannot be
+  // cashed out; it is spent on Jokers and shop rerolls.
+  shopCurrency: number;
+  jokers: string[];
+  shopSeed: number;
+  shopOffers: ShopOffer[];
+  shopRerolls: number;
 };
 
 export function round2(value: number): number {
@@ -97,6 +107,9 @@ export type ScoreInput = {
   startedTick: number;
   endedTick: number;
   tradeCount: number;
+  roundIndex: number;
+  roundHistory: Array<{ score: number; pass: boolean; ante: number; round: number }>;
+  jokers: string[];
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -124,20 +137,36 @@ export function scoreRound(input: ScoreInput): RoundResultV1 {
   if (risingBonus) effects.push({ kind: "chips-add", label: "Rising", value: risingBonus });
   effects.push({ kind: "mult", label: "Multiplier", value: mult });
 
-  const score = Math.round(chips * mult);
+  const context = {
+    startValue: input.startValue,
+    cashEnd: input.cashEnd,
+    holdingsEnd: input.holdingsEnd,
+    pricesStart: input.pricesStart,
+    pricesEnd: input.pricesEnd,
+    tradeCount: input.tradeCount,
+    roundIndex: input.roundIndex ?? 0,
+    roundHistory: input.roundHistory ?? [],
+  };
+  const scored = applyJokerEffects(input.jokers ?? [], context, {
+    chips,
+    mult,
+    score: Math.round(chips * mult),
+    effects: effects.map(e => ({ kind: e.kind, label: e.label, value: e.value })),
+  });
+
   return {
     roundId: `${input.ante}:${input.round}`,
     ante: input.ante,
     round: input.round,
     target: input.target,
-    chips,
-    mult,
-    score,
-    pass: score >= input.target,
+    chips: scored.chips,
+    mult: scored.mult,
+    score: scored.score,
+    pass: scored.score >= input.target,
     startedTick: input.startedTick,
     endedTick: input.endedTick,
     tradeCount: input.tradeCount,
-    effects,
+    effects: scored.effects.map(e => ({ kind: e.kind, label: e.label, value: e.value })),
   };
 }
 
@@ -169,6 +198,11 @@ export function createRun(playerId: string, playerName: string, prices: Prices, 
     completedAntes: 0,
     seed: Math.floor(Math.random() * 2 ** 31),
     roundHistory: [],
+    shopCurrency: SHOP_STARTING_CURRENCY,
+    jokers: [],
+    shopSeed: Math.floor(Math.random() * 2 ** 31),
+    shopOffers: [],
+    shopRerolls: 0,
   };
 }
 
@@ -201,6 +235,9 @@ export function lockRound(run: RunSaveV1, prices: Prices, tick: number, now = Da
     startedTick: run.roundStartedTick,
     endedTick: tick,
     tradeCount: run.tradeCount,
+    roundIndex: (run.ante - 1) * RUN_RULES.roundsPerAnte + (run.round - 1),
+    roundHistory: run.roundHistory,
+    jokers: run.jokers,
   });
   const history = [...run.roundHistory, result].slice(-RUN_RULES.roundHistoryLimit);
   const next: RunSaveV1 = {
@@ -245,6 +282,7 @@ export function advanceRun(run: RunSaveV1, prices: Prices, tick: number, now = D
     round,
     target: targetForRound(ante, round),
     completedAntes: isLastRound ? run.ante : run.completedAntes,
+    shopCurrency: run.shopCurrency + SHOP_ROUND_REWARD,
     updatedAt: now,
   };
   return openRound(next, prices, tick, now);
@@ -301,5 +339,10 @@ export function migrateRun(raw: unknown): RunSaveV1 | null {
     completedAntes: isFiniteNumber(candidate.completedAntes) ? candidate.completedAntes : 0,
     seed: isFiniteNumber(candidate.seed) ? candidate.seed : 1,
     roundHistory: Array.isArray(candidate.roundHistory) ? candidate.roundHistory.slice(-RUN_RULES.roundHistoryLimit) : [],
+    shopCurrency: isFiniteNumber(candidate.shopCurrency) ? candidate.shopCurrency : SHOP_STARTING_CURRENCY,
+    jokers: Array.isArray(candidate.jokers) ? candidate.jokers : [],
+    shopSeed: isFiniteNumber(candidate.shopSeed) ? candidate.shopSeed : Math.floor(Math.random() * 2 ** 31),
+    shopOffers: Array.isArray(candidate.shopOffers) ? candidate.shopOffers : [],
+    shopRerolls: isFiniteNumber(candidate.shopRerolls) ? candidate.shopRerolls : 0,
   };
 }

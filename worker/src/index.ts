@@ -9,6 +9,17 @@ import {
   RUN_RULES,
   type RunSaveV1,
 } from "./run.ts";
+import {
+  JOKER_CATALOG,
+  RARITY_ORDER,
+  generateShopOffers,
+  applyPurchase,
+  applyReroll,
+  SHOP_REROLL_COST,
+  SHOP_ROUND_REWARD,
+  type Joker,
+  type ShopState,
+} from "./jokers.ts";
 
 const startingPrices = {
   MTA: 42.00,
@@ -418,8 +429,14 @@ export class Market extends DurableObject {
 
     const market = await this.getMarket();
     const run = createRun(playerId, playerName, market.prices, market.tick);
-    await this.ctx.storage.put(`run:${playerId}`, run);
-    return run;
+    // Generate the initial shop offer list deterministically from the run seed.
+    const offers = generateShopOffers(run.shopSeed, run.ante, run.round, run.jokers, null);
+    const seeded: RunSaveV1 = {
+      ...run,
+      shopOffers: offers,
+    };
+    await this.ctx.storage.put(`run:${playerId}`, seeded);
+    return seeded;
   }
 
   async lockPlayerRun(playerId: string) {
@@ -446,6 +463,52 @@ export class Market extends DurableObject {
     const next = retireRun(run);
     await this.ctx.storage.put(`run:${playerId}`, next);
     return next;
+  }
+
+  async purchaseJoker(playerId: string, jokerId: string): Promise<{ run: RunSaveV1; shop: ShopState; joker: Joker | undefined }> {
+    const run = await this.getRun(playerId);
+    if (!run) throw new Error("No active run");
+    const state: ShopState = {
+      currency: run.shopCurrency,
+      owned: run.jokers,
+      offers: run.shopOffers,
+      rerolls: run.shopRerolls,
+    };
+    const next = applyPurchase(state, jokerId);
+    if (!next) throw new Error("Purchase rejected");
+    const joker = JOKER_CATALOG.find(j => j.id === jokerId);
+    const updated: RunSaveV1 = {
+      ...run,
+      shopCurrency: next.currency,
+      jokers: next.owned,
+      shopOffers: next.offers,
+      shopRerolls: next.rerolls,
+      updatedAt: Date.now(),
+    };
+    await this.ctx.storage.put(`run:${playerId}`, updated);
+    return { run: updated, shop: next, joker };
+  }
+
+  async rerollShop(playerId: string): Promise<{ run: RunSaveV1; shop: ShopState }> {
+    const run = await this.getRun(playerId);
+    if (!run) throw new Error("No active run");
+    const state: ShopState = {
+      currency: run.shopCurrency,
+      owned: run.jokers,
+      offers: run.shopOffers,
+      rerolls: run.shopRerolls,
+    };
+    const next = applyReroll(state, run.shopSeed, run.ante, run.round);
+    if (!next) throw new Error("Reroll rejected");
+    const updated: RunSaveV1 = {
+      ...run,
+      shopCurrency: next.currency,
+      shopOffers: next.offers,
+      shopRerolls: next.rerolls,
+      updatedAt: Date.now(),
+    };
+    await this.ctx.storage.put(`run:${playerId}`, updated);
+    return { run: updated, shop: next };
   }
 
   // Completed runs are bounded per player so the run key stays small.
@@ -865,6 +928,53 @@ export default {
         }
       } catch (error) {
         return Response.json({ error: error instanceof Error ? error.message : "Run action rejected" }, { status: 400, headers: cors });
+      }
+    }
+
+    if (url.pathname === "/api/jokers" && request.method === "GET") {
+      // Public read-only catalog of every Joker in the collection. No acquisition
+      // or shop mechanics yet; this is reference data for the collection screen.
+      return Response.json({ jokers: JOKER_CATALOG, rarities: RARITY_ORDER }, { headers: cors });
+    }
+
+    if (url.pathname === "/api/shop" && request.method === "GET") {
+      const market = env.MARKET.getByName("global-school-year-market-v12");
+      const playerId = await market.playerIdForSession(sessionToken(request));
+      if (!playerId) return Response.json({ error: "Not authenticated" }, { status: 401, headers: cors });
+      const run = await market.getRun(playerId);
+      if (!run) return Response.json({ error: "No active run" }, { status: 404, headers: cors });
+      const state: ShopState = {
+        currency: run.shopCurrency,
+        owned: run.jokers,
+        offers: run.shopOffers,
+        rerolls: run.shopRerolls,
+      };
+      return Response.json({ shop: state, rules: { rerollCost: SHOP_REROLL_COST, roundReward: SHOP_ROUND_REWARD } }, { headers: cors });
+    }
+
+    if (url.pathname === "/api/shop/purchase" && request.method === "POST") {
+      try {
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        const playerId = await market.playerIdForSession(sessionToken(request));
+        if (!playerId) return Response.json({ error: "Not authenticated" }, { status: 401, headers: cors });
+        const body = await request.json() as { jokerId?: string };
+        if (!body.jokerId) return Response.json({ error: "Missing joker id" }, { status: 400, headers: cors });
+        const result = await market.purchaseJoker(playerId, body.jokerId);
+        return Response.json(result, { headers: cors });
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "Purchase rejected" }, { status: 400, headers: cors });
+      }
+    }
+
+    if (url.pathname === "/api/shop/reroll" && request.method === "POST") {
+      try {
+        const market = env.MARKET.getByName("global-school-year-market-v12");
+        const playerId = await market.playerIdForSession(sessionToken(request));
+        if (!playerId) return Response.json({ error: "Not authenticated" }, { status: 401, headers: cors });
+        const result = await market.rerollShop(playerId);
+        return Response.json(result, { headers: cors });
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "Reroll rejected" }, { status: 400, headers: cors });
       }
     }
 
