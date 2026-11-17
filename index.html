@@ -47,6 +47,7 @@
             <span id="menu-primary-note" class="menu-action-note">$10,000 bankroll</span>
           </button>
           <button id="menu-collection" class="menu-action" type="button">Collection</button>
+          <button id="menu-shop" class="menu-action" type="button">Shop</button>
           <button id="menu-results" class="menu-action" type="button" hidden>View results</button>
           <button id="menu-classic" class="menu-action" type="button">Classic board</button>
         </nav>
@@ -246,6 +247,22 @@
         </header>
         <div id="collection-grid" class="collection-grid"></div>
         <p id="collection-empty" class="collection-empty" hidden>—</p>
+      </div>
+    </section>
+
+    <section id="screen-shop" class="screen screen-shop" data-screen="shop" hidden>
+      <div class="shop-shell">
+        <header class="shop-head">
+          <button id="shop-back" class="link-button" type="button">Menu</button>
+          <h2 class="shop-title">Shop</h2>
+          <div class="shop-currency">
+            <span class="shop-currency-label">Credits</span>
+            <strong id="shop-currency">—</strong>
+            <button id="shop-reroll" class="shop-reroll" type="button">Reroll · <strong id="shop-reroll-cost">—</strong></button>
+          </div>
+        </header>
+        <div id="shop-grid" class="shop-grid"></div>
+        <p id="shop-empty" class="shop-empty" hidden>—</p>
       </div>
     </section>
   </main>

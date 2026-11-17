@@ -7,6 +7,12 @@ import {
   RARITY_ORDER,
   RARITY_STYLE,
   consecutiveHoldRounds,
+  generateShopOffers,
+  applyPurchase,
+  applyReroll,
+  SHOP_STARTING_CURRENCY,
+  SHOP_REROLL_COST,
+  type ShopState,
 } from "../src/jokers.ts";
 
 const base = {
@@ -167,4 +173,109 @@ test("consecutive hold rounds counts completed rounds", () => {
   assert.strictEqual(consecutiveHoldRounds([], 0), 0, "round 0 streak should be 0");
   assert.strictEqual(consecutiveHoldRounds([{}, {}, {}], 3), 3, "three-round streak should be 3");
   assert.strictEqual(consecutiveHoldRounds([{}, {}], 5), 2, "streak capped by history length");
+});
+
+test("generateShopOffers returns deterministic offers and never offers owned jokers", () => {
+  const seed = 12345;
+  const a = generateShopOffers(seed, 1, 1, [], null);
+  const b = generateShopOffers(seed, 1, 1, [], null);
+  assert.deepEqual(a, b, "same seed produces same offers");
+  assert.ok(a.length > 0, "should generate offers");
+  assert.ok(a.length <= 4, "should not exceed offer count");
+
+  const owned = ["black-swan"];
+  const c = generateShopOffers(seed, 1, 1, owned, null);
+  assert.ok(!c.some(o => o.jokerId === "black-swan"), "owned jokers are not re-offered");
+});
+
+test("generateShopOffers changes with seed and ante", () => {
+  const a = generateShopOffers(1, 1, 1, [], null);
+  const b = generateShopOffers(2, 1, 1, [], null);
+  const c = generateShopOffers(1, 2, 1, [], null);
+  // Different seeds or antes should (very likely) produce different offers
+  let differs = false;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (a[i].jokerId !== b[i].jokerId || a[i].price !== b[i].price) differs = true;
+  }
+  assert.ok(differs, "different seed produces different offers");
+
+  differs = false;
+  for (let i = 0; i < Math.min(a.length, c.length); i++) {
+    if (a[i].jokerId !== c[i].jokerId || a[i].price !== c[i].price) differs = true;
+  }
+  assert.ok(differs, "different ante produces different offers");
+});
+
+test("applyPurchase deducts currency and adds joker to owned", () => {
+  const state: ShopState = {
+    currency: 100,
+    owned: [],
+    offers: [{ jokerId: "diversification", price: 30 }],
+    rerolls: 0,
+  };
+  const next = applyPurchase(state, "diversification");
+  assert.ok(next, "purchase should succeed");
+  assert.strictEqual(next!.currency, 70, "currency deducted");
+  assert.deepEqual(next!.owned, ["diversification"], "joker added to owned");
+  assert.deepEqual(next!.offers, [], "offer removed");
+  assert.strictEqual(next!.rerolls, 0, "rerolls unchanged");
+});
+
+test("applyPurchase rejects insufficient currency", () => {
+  const state: ShopState = {
+    currency: 10,
+    owned: [],
+    offers: [{ jokerId: "diversification", price: 30 }],
+    rerolls: 0,
+  };
+  assert.strictEqual(applyPurchase(state, "diversification"), null, "should reject when too poor");
+});
+
+test("applyPurchase rejects already-owned jokers", () => {
+  const state: ShopState = {
+    currency: 100,
+    owned: ["diversification"],
+    offers: [{ jokerId: "diversification", price: 30 }],
+    rerolls: 0,
+  };
+  assert.strictEqual(applyPurchase(state, "diversification"), null, "should reject owned joker");
+});
+
+test("applyPurchase rejects unknown offer", () => {
+  const state: ShopState = {
+    currency: 100,
+    owned: [],
+    offers: [{ jokerId: "diversification", price: 30 }],
+    rerolls: 0,
+  };
+  assert.strictEqual(applyPurchase(state, "black-swan"), null, "should reject unknown offer");
+});
+
+test("applyReroll deducts cost and generates new offers", () => {
+  const state: ShopState = {
+    currency: 50,
+    owned: [],
+    offers: [{ jokerId: "diversification", price: 30 }],
+    rerolls: 0,
+  };
+  const next = applyReroll(state, 999, 1, 1);
+  assert.ok(next, "reroll should succeed");
+  assert.strictEqual(next!.currency, 35, "reroll cost deducted");
+  assert.strictEqual(next!.rerolls, 1, "reroll count incremented");
+  assert.ok(next!.offers.length > 0, "new offers generated");
+});
+
+test("applyReroll rejects insufficient currency", () => {
+  const state: ShopState = {
+    currency: 10,
+    owned: [],
+    offers: [{ jokerId: "diversification", price: 30 }],
+    rerolls: 0,
+  };
+  assert.strictEqual(applyReroll(state, 999, 1, 1), null, "should reject when too poor");
+});
+
+test("SHOP_STARTING_CURRENCY and SHOP_REROLL_COST constants", () => {
+  assert.strictEqual(SHOP_STARTING_CURRENCY, 100);
+  assert.strictEqual(SHOP_REROLL_COST, 15);
 });

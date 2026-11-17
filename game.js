@@ -7,7 +7,7 @@ const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
 const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
 const RUN_RULES_FALLBACK = { antes: 8, roundsPerAnte: 3, startingCash: 10000 };
-const SCREEN_NAMES = ["menu", "floor", "score", "results", "collection"];
+const SCREEN_NAMES = ["menu", "floor", "score", "results", "collection", "shop"];
 let runRules = { ...RUN_RULES_FALLBACK };
 let runState = null;
 let lastRoundResult = null;
@@ -17,6 +17,7 @@ let runBusy = false;
 let scoreAnimationToken = 0;
 let scoreRenderKey = "";
 let jokerCatalog = null;
+let shopState = null;
 
 function updateDevConsole(data) {
   if (!isDeveloper()) return;
@@ -738,6 +739,7 @@ async function loadPlayer() {
     $("identity-gate").hidden = true;
     loadDeveloperAccess();
     await loadRunState();
+    await loadShopState();
     if (runState) applyRunAccount();
     renderMenu();
     render();
@@ -911,6 +913,7 @@ function renderMenu() {
   const resultsButton = $("menu-results");
   const classicButton = $("menu-classic");
   const collectionButton = $("menu-collection");
+  const shopButton = $("menu-shop");
   const primary = $("menu-primary");
   const label = $("menu-primary-label");
   const note = $("menu-primary-note");
@@ -923,6 +926,8 @@ function renderMenu() {
   classicButton.hidden = false;
   collectionButton.hidden = false;
   collectionButton.disabled = runBusy;
+  shopButton.hidden = !runState;
+  shopButton.disabled = runBusy;
   primary.disabled = runBusy;
 
   if (!runState) {
@@ -1150,6 +1155,18 @@ async function loadJokerCatalog() {
   }
 }
 
+async function loadShopState() {
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/shop`, { credentials: "include" });
+    if (!response.ok) return null;
+    const data = await response.json();
+    shopState = data.shop || null;
+    return shopState;
+  } catch {
+    return null;
+  }
+}
+
 function renderCollectionScreen() {
   const grid = $("collection-grid");
   const count = $("collection-count");
@@ -1185,6 +1202,70 @@ function renderCollectionScreen() {
         <h3 class="joker-name">${joker.name}</h3>
         <span class="joker-rarity">${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</span>
         <p class="joker-desc">${joker.description}</p>
+      `;
+      grid.append(card);
+      any = true;
+    }
+  }
+  return true;
+}
+
+function renderShopScreen() {
+  const grid = $("shop-grid");
+  const currency = $("shop-currency");
+  const rerollBtn = $("shop-reroll");
+  const rerollCost = $("shop-reroll-cost");
+  const empty = $("shop-empty");
+  if (!grid) return false;
+  if (!shopState) {
+    grid.replaceChildren();
+    currency.textContent = "—";
+    rerollCost.textContent = "—";
+    rerollBtn.disabled = true;
+    empty.hidden = false;
+    return true;
+  }
+  empty.hidden = true;
+  currency.textContent = shopState.currency.toLocaleString();
+  rerollCost.textContent = "15";
+  rerollBtn.disabled = shopState.currency < 15;
+  grid.replaceChildren();
+  if (!jokerCatalog) {
+    grid.replaceChildren();
+    return true;
+  }
+  const byRarity = {};
+  for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
+    byRarity[rarity] = [];
+  }
+  for (const offer of shopState.offers) {
+    const joker = jokerCatalog.jokers.find(j => j.id === offer.jokerId);
+    if (!joker) continue;
+    byRarity[joker.rarity] = byRarity[joker.rarity] || [];
+    byRarity[joker.rarity].push({ joker, offer });
+  }
+  let any = false;
+  for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
+    const group = byRarity[rarity];
+    if (!group || !group.length) continue;
+    const header = document.createElement("h3");
+    header.className = "shop-rarity";
+    header.textContent = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+    grid.append(header);
+    for (const { joker, offer } of group) {
+      const card = document.createElement("article");
+      card.className = "shop-card";
+      card.dataset.rarity = rarity;
+      card.dataset.jokerId = joker.id;
+      const owned = shopState.owned.includes(joker.id);
+      const affordable = shopState.currency >= offer.price;
+      card.innerHTML = `
+        <div class="shop-glyph">${joker.glyph}</div>
+        <h3 class="shop-name">${joker.name}</h3>
+        <span class="shop-rarity-chip">${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</span>
+        <p class="shop-desc">${joker.description}</p>
+        <div class="shop-price">$${offer.price}</div>
+        <button class="shop-buy" type="button" ${owned ? "disabled" : ""} ${!affordable ? "disabled" : ""} data-joker-id="${joker.id}">${owned ? "Owned" : "Buy"}</button>
       `;
       grid.append(card);
       any = true;
@@ -1269,6 +1350,10 @@ async function navigate(name, { hash = true } = {}) {
       name = "menu";
       renderMenu();
     }
+    if (name === "shop" && !renderShopScreen()) {
+      name = "menu";
+      renderMenu();
+    }
     setScreen(name);
   }
 
@@ -1289,6 +1374,10 @@ async function routeAfterAuth() {
   }
   if (hash === "collection") {
     await navigate("collection");
+    return;
+  }
+  if (hash === "shop") {
+    await navigate("shop");
     return;
   }
   if (!runState) {
@@ -1394,6 +1483,52 @@ async function retireCurrentRun() {
   }
 }
 
+async function purchaseJoker(jokerId) {
+  if (runBusy) return;
+  runBusy = true;
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/shop/purchase`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jokerId }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Purchase rejected.");
+    runRulesFrom(data);
+    shopState = data.shop || null;
+    runState = data.run || null;
+    renderShopScreen();
+    renderMenu();
+  } catch (error) {
+    setMessage(error instanceof Error ? error.message : "Purchase failed.");
+  } finally {
+    runBusy = false;
+  }
+}
+
+async function rerollShop() {
+  if (runBusy) return;
+  runBusy = true;
+  try {
+    const response = await fetch(`${BACKEND_HTTP_URL}/api/shop/reroll`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Reroll rejected.");
+    runRulesFrom(data);
+    shopState = data.shop || null;
+    runState = data.run || null;
+    renderShopScreen();
+    renderMenu();
+  } catch (error) {
+    setMessage(error instanceof Error ? error.message : "Reroll failed.");
+  } finally {
+    runBusy = false;
+  }
+}
+
 $("market").addEventListener("click", event => {
   const button = event.target.closest("button");
   if (button) trade(Number(button.dataset.index), button.dataset.action);
@@ -1416,12 +1551,19 @@ $("menu-primary").addEventListener("click", () => {
 $("menu-results").addEventListener("click", () => navigate("results"));
 $("menu-classic").addEventListener("click", () => navigate("floor"));
 $("menu-collection").addEventListener("click", () => navigate("collection"));
+$("menu-shop").addEventListener("click", () => navigate("shop"));
 $("score-menu").addEventListener("click", () => navigate("menu"));
 $("score-next").addEventListener("click", advanceRunRound);
 $("results-new-run").addEventListener("click", startRun);
 $("results-classic").addEventListener("click", () => navigate("floor"));
 $("results-menu").addEventListener("click", () => navigate("menu"));
 $("collection-back").addEventListener("click", () => navigate("menu"));
+$("shop-back").addEventListener("click", () => navigate("menu"));
+$("shop-reroll").addEventListener("click", rerollShop);
+$("shop-grid").addEventListener("click", event => {
+  const button = event.target.closest("button.shop-buy");
+  if (button) purchaseJoker(button.dataset.jokerId);
+});
 window.addEventListener("hashchange", () => {
   const name = location.hash.replace(/^#/, "");
   if (SCREEN_NAMES.includes(name)) navigate(name, { hash: false });

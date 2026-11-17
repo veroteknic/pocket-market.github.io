@@ -490,3 +490,107 @@ export function applyJokerEffects(
   const score = Math.round(chips * mult);
   return { chips, mult, score, effects };
 }
+
+// ---------- Shop ----------
+
+export interface ShopOffer {
+  jokerId: string;
+  price: number;
+}
+
+export interface ShopState {
+  currency: number;
+  owned: string[];
+  offers: ShopOffer[];
+  rerolls: number;
+}
+
+// Simple 32-bit LCG for deterministic, reproducible shop generation.
+function lcg(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1103515245 + 12345) & 0x7fffffff;
+    return state / 0x7fffffff;
+  };
+}
+
+const RARITY_PRICE: Record<JokerRarity, { min: number; max: number }> = {
+  common: { min: 20, max: 40 },
+  uncommon: { min: 50, max: 80 },
+  rare: { min: 100, max: 150 },
+  epic: { min: 200, max: 300 },
+  legendary: { min: 500, max: 700 },
+};
+
+// Starting shop currency is separate from real cash and cannot be cashed out.
+export const SHOP_STARTING_CURRENCY = 100;
+export const SHOP_OFFER_COUNT = 4;
+export const SHOP_REROLL_COST = 15;
+export const SHOP_ROUND_REWARD = 30;
+
+function priceFor(joker: Joker, rng: () => number): number {
+  const band = RARITY_PRICE[joker.rarity];
+  return band.min + Math.floor(rng() * (band.max - band.min + 1));
+}
+
+// Generates a deterministic shop offer list from the run seed, ante and round.
+// Jokers the player already owns are never re-offered.
+export function generateShopOffers(
+  seed: number,
+  ante: number,
+  round: number,
+  owned: string[],
+  existingOffers: ShopOffer[] | null,
+): ShopOffer[] {
+  const mix = seed ^ (ante * 7919 + round * 101);
+  const rng = lcg(mix);
+  const available = JOKER_CATALOG.filter(joker => !owned.includes(joker.id));
+  // Shuffle a copy using Fisher-Yates with the deterministic RNG.
+  const pool = [...available];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const count = Math.min(SHOP_OFFER_COUNT, pool.length);
+  return pool.slice(0, count).map(joker => ({
+    jokerId: joker.id,
+    price: priceFor(joker, rng),
+  }));
+}
+
+// Applies a purchase to a shop state. Returns the new state or null if invalid.
+export function applyPurchase(
+  state: ShopState,
+  jokerId: string,
+): ShopState | null {
+  const offer = state.offers.find(o => o.jokerId === jokerId);
+  if (!offer) return null;
+  if (state.owned.includes(jokerId)) return null;
+  if (state.currency < offer.price) return null;
+  const joker = findJoker(jokerId);
+  if (!joker) return null;
+  return {
+    currency: state.currency - offer.price,
+    owned: [...state.owned, jokerId],
+    offers: state.offers.filter(o => o.jokerId !== jokerId),
+    rerolls: state.rerolls,
+  };
+}
+
+// Applies a reroll to a shop state. Returns the new state or null if invalid.
+export function applyReroll(
+  state: ShopState,
+  seed: number,
+  ante: number,
+  round: number,
+): ShopState | null {
+  if (state.currency < SHOP_REROLL_COST) return null;
+  const offers = generateShopOffers(seed, ante, round, state.owned, state.offers);
+  return {
+    currency: state.currency - SHOP_REROLL_COST,
+    owned: state.owned,
+    offers,
+    rerolls: state.rerolls + 1,
+  };
+}
+
