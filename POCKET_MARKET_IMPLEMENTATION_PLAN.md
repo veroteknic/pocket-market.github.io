@@ -895,6 +895,7 @@ implementation can start immediately if approved.
 | 3 — Core gameplay | **Basic slice working** | Deterministic `chips × mult` scoring, targets, failure, progression, scoring screen and tests. |
 | 4 — Trading integration | **Basic slice working** | Run portfolio routes through the existing trade endpoint; shared market, slippage and broadcast preserved. |
 | 5 — Joker system | **5A + 5B complete** | Catalog module `worker/src/jokers.ts`: 20 jokers, five rarities, pure effect engine, shop generation/purchase/reroll, `/api/jokers`, `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll` endpoints. Jokers wired into `scoreRound`. Collection screen and Shop screen on the frontend. 36 Worker tests pass. |
+| 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions (diversification-demand, concentration-penalty, multiplier-ceiling, sector-blind, volatility-wall, breadth-requirement, quiet-tape, iron-cap). Purchase-triggered market events: 25% chance on each joker buy triggers bull surge (+0.3 mult) or flatline (halves rising bonus) shared with all players via WebSocket broadcast. Boss info shown on run strip and score screen. 45 Worker tests pass. |
 | 6 — Shop and consumables | Not started | Depends on 5 catalog and 1B save. |
 | 7 — Boss rounds and events | Not started | Depends on 3, 5, 6. |
 | 8 — Polish | Partial | Screen transitions, score reveal and reduced-motion support; further polish after mechanics stabilize. |
