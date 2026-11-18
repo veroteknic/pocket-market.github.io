@@ -616,7 +616,7 @@ button.tap { animation: button-pop 160ms ease-out; }
   padding: 14px 0;
   border-bottom: 1px solid var(--line);
 }
-.run-strip-main { display: grid; flex: 1; grid-template-columns: repeat(5, minmax(0, 1fr)); min-width: 0; }
+.run-strip-main { display: grid; flex: 1; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; min-width: 0; }
 .run-cell { min-width: 0; padding: 0 14px; border-left: 1px solid var(--line); }
 .run-cell:first-child { padding-left: 0; border-left: 0; }
 .run-cell > span {
@@ -1482,6 +1482,85 @@ body.dev-open { padding-right: 410px; }
   font: 12px/1.6 var(--mono);
   text-align: center;
   padding: 40px 0;
+}
+
+/* ---------- Boss screen ---------- */
+
+.boss-shell {
+  width: min(600px, 90%);
+  margin: 0 auto;
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 96px);
+}
+
+.boss-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-bright);
+  margin-bottom: 32px;
+}
+
+.boss-title {
+  margin: 0;
+  font: 600 clamp(34px, 7vw, 52px)/0.95 var(--display);
+  letter-spacing: -0.03em;
+}
+
+.boss-ante {
+  margin: 0;
+  color: var(--muted);
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.boss-card {
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 28px 22px;
+  background: #1c1810;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+}
+
+.boss-glyph {
+  font-size: 44px;
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.boss-name {
+  margin: 0 0 10px;
+  font: 600 clamp(24px, 5vw, 32px)/1.1 var(--display);
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.boss-detail {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font: 12px/1.6 var(--mono);
+}
+
+.boss-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.boss-actions .primary-action {
+  flex: 1;
 }
 
 /* ---------- Shop responsive ---------- */

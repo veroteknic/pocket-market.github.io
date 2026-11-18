@@ -77,6 +77,7 @@
           <div class="run-cell"><span>Target</span><strong id="run-target">120</strong></div>
           <div class="run-cell"><span>Score</span><strong id="run-score">0</strong></div>
           <div class="run-cell"><span>Preview</span><strong id="run-preview">—</strong><small id="run-preview-formula">—</small></div>
+          <div class="run-cell jokers-cell" id="run-jokers" hidden><span>Jokers</span><strong id="run-joker-count">0</strong></div>
           <div class="run-cell boss-cell" id="run-boss" hidden><span>Boss</span><strong id="run-boss-name">—</strong></div>
         </div>
         <div class="run-actions">
@@ -265,6 +266,24 @@
         </header>
         <div id="shop-grid" class="shop-grid"></div>
         <p id="shop-empty" class="shop-empty" hidden>—</p>
+      </div>
+    </section>
+
+    <section id="screen-boss" class="screen screen-boss" data-screen="boss" hidden>
+      <div class="boss-shell">
+        <header class="boss-head">
+          <button id="boss-back" class="link-button" type="button">Menu</button>
+          <h2 class="boss-title">Boss Round</h2>
+          <p id="boss-ante" class="boss-ante">Ante 1 · Round 3</p>
+        </header>
+        <div class="boss-card">
+          <div class="boss-glyph">⚔</div>
+          <h3 id="boss-name" class="boss-name">—</h3>
+          <p id="boss-detail" class="boss-detail">—</p>
+        </div>
+        <div class="boss-actions">
+          <button id="boss-start" class="primary-action" type="button">Start round</button>
+        </div>
       </div>
     </section>
   </main>

@@ -7,7 +7,7 @@ const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
 const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
 const RUN_RULES_FALLBACK = { antes: 8, roundsPerAnte: 3, startingCash: 10000 };
-const SCREEN_NAMES = ["menu", "floor", "score", "results", "collection", "shop"];
+const SCREEN_NAMES = ["menu", "floor", "score", "results", "collection", "shop", "boss"];
 let runRules = { ...RUN_RULES_FALLBACK };
 let runState = null;
 let lastRoundResult = null;
@@ -18,8 +18,25 @@ let scoreAnimationToken = 0;
 let scoreRenderKey = "";
 let jokerCatalog = null;
 let shopState = null;
-let lastBoss = null;
 let pendingMarketEvent = null;
+
+// Client-side boss catalog so boss info survives reloads without depending on
+// in-memory state from a previous page visit. Keys match the server-side
+// BOSS_ROUNDS ante order in worker/src/run.ts.
+const BOSS_INFO = {
+  1: { name: "The Diversification Demand", detail: "Hold at least 2 distinct companies or chips are halved." },
+  2: { name: "The Concentration Penalty", detail: "One dominant holding above 35% of portfolio chips your score." },
+  3: { name: "The Multiplier Ceiling", detail: "Multiplier cannot exceed 1.4 this round." },
+  4: { name: "The Sector Blind", detail: "One sector generates no chips this round." },
+  5: { name: "The Volatility Wall", detail: "Round target is raised by 40%." },
+  6: { name: "The Breadth Requirement", detail: "Hold all four companies or you earn no holdings/rising bonuses." },
+  7: { name: "The Quiet Tape", detail: "Rising holdings earn half their usual bonus." },
+  8: { name: "The Iron Cap", detail: "Final score cannot exceed 10% above the target." },
+};
+
+function bossForAnteClient(ante) {
+  return BOSS_INFO[ante] || null;
+}
 
 function updateDevConsole(data) {
   if (!isDeveloper()) return;
@@ -910,7 +927,7 @@ function renderRunStrip() {
   const bossEl = $("run-boss");
   const bossNameEl = $("run-boss-name");
   const isBoss = runState.round === runRules.roundsPerAnte;
-  const boss = isBoss && lastBoss ? lastBoss : null;
+  const boss = isBoss ? bossForAnteClient(runState.ante) : null;
   if (boss) {
     bossEl.hidden = false;
     bossNameEl.textContent = boss.name;
@@ -920,10 +937,19 @@ function renderRunStrip() {
     bossEl.hidden = true;
     strip.classList.remove("boss-round");
   }
+
+  const jokersEl = $("run-jokers");
+  const jokerCountEl = $("run-joker-count");
+  const ownedJokers = runState.jokers || [];
+  if (ownedJokers.length) {
+    jokersEl.hidden = false;
+    jokerCountEl.textContent = ownedJokers.length;
+  } else {
+    jokersEl.hidden = true;
+  }
 }
 
 function renderMenu() {
-  lastBoss = null;
   const summary = $("menu-summary");
   const rules = $("menu-rules");
   const line = $("menu-run-line");
@@ -1077,9 +1103,10 @@ function renderScoreScreen() {
   if (!result) return false;
   const isBoss = result.round === runRules.roundsPerAnte;
   const bossEl = $("score-boss");
-  if (lastBoss && isBoss) {
+  const boss = isBoss ? bossForAnteClient(result.ante) : null;
+  if (boss) {
     bossEl.hidden = false;
-    bossEl.textContent = `Boss round — ${lastBoss.name}: ${lastBoss.detail}`;
+    bossEl.textContent = `Boss round — ${boss.name}: ${boss.detail}`;
   } else {
     bossEl.hidden = true;
   }
@@ -1299,6 +1326,20 @@ function renderShopScreen() {
   return true;
 }
 
+function renderBossScreen() {
+  const boss = bossForAnteClient(runState ? runState.ante : 1);
+  const nameEl = $("boss-name");
+  const detailEl = $("boss-detail");
+  const anteEl = $("boss-ante");
+  if (!boss) {
+    return false;
+  }
+  nameEl.textContent = boss.name;
+  detailEl.textContent = boss.detail;
+  anteEl.textContent = `Ante ${runState.ante} · Round ${runRules.roundsPerAnte}`;
+  return true;
+}
+
 async function runRequest(path) {
   const response = await fetch(`${BACKEND_HTTP_URL}${path}`, { method: "POST", credentials: "include" });
   const data = await response.json().catch(() => ({}));
@@ -1357,6 +1398,11 @@ async function navigate(name, { hash = true } = {}) {
   if (name === "floor" && runState?.phase === "scoring") name = "score";
 
   if (name === "floor") {
+    // Round 3 of each ante is a boss round: present the challenge screen first.
+    if (runState && runState.round === runRules.roundsPerAnte) {
+      await navigate("boss", { hash: false });
+      return;
+    }
     await prepareFloor();
     // Reveal the board before drawing so the chart measures a laid-out canvas.
     setScreen("floor");
@@ -1376,6 +1422,10 @@ async function navigate(name, { hash = true } = {}) {
       renderMenu();
     }
     if (name === "shop" && !renderShopScreen()) {
+      name = "menu";
+      renderMenu();
+    }
+    if (name === "boss" && !renderBossScreen()) {
       name = "menu";
       renderMenu();
     }
@@ -1405,6 +1455,10 @@ async function routeAfterAuth() {
     await navigate("shop");
     return;
   }
+  if (hash === "boss") {
+    await navigate("boss");
+    return;
+  }
   if (!runState) {
     await navigate("menu");
     return;
@@ -1431,6 +1485,7 @@ async function startRun() {
     lastRoundResult = null;
     scoreRenderKey = "";
     applyRunAccount();
+    await loadShopState();
     await navigate("floor");
   } catch (error) {
     $("menu-error").textContent = error instanceof Error ? error.message : "Run unavailable.";
@@ -1452,7 +1507,6 @@ async function lockRunRound() {
   try {
     const data = await runRequest("/api/run/round/lock");
     runState = data.run;
-    lastBoss = data.boss || null;
     lastRoundResult = data.result || runState.roundHistory?.[runState.roundHistory.length - 1] || null;
     scoreRenderKey = "";
     applyRunAccount();
@@ -1590,6 +1644,8 @@ $("results-classic").addEventListener("click", () => navigate("floor"));
 $("results-menu").addEventListener("click", () => navigate("menu"));
 $("collection-back").addEventListener("click", () => navigate("menu"));
 $("shop-back").addEventListener("click", () => navigate("menu"));
+$("boss-back").addEventListener("click", () => navigate("menu"));
+$("boss-start").addEventListener("click", () => navigate("floor"));
 $("shop-reroll").addEventListener("click", rerollShop);
 $("shop-grid").addEventListener("click", event => {
   const button = event.target.closest("button.shop-buy");
