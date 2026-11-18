@@ -896,9 +896,9 @@ implementation can start immediately if approved.
 | 4 — Trading integration | **Basic slice working** | Run portfolio routes through the existing trade endpoint; shared market, slippage and broadcast preserved. |
 | 5 — Joker system | **5A + 5B complete** | Catalog module `worker/src/jokers.ts`: 20 jokers, five rarities, pure effect engine, shop generation/purchase/reroll, `/api/jokers`, `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll` endpoints. Jokers wired into `scoreRound`. Collection screen and Shop screen on the frontend. 36 Worker tests pass. |
 | 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions (diversification-demand, concentration-penalty, multiplier-ceiling, sector-blind, volatility-wall, breadth-requirement, quiet-tape, iron-cap). Purchase-triggered market events: 25% chance on each joker buy triggers bull surge (+0.3 mult) or flatline (halves rising bonus) shared with all players via WebSocket broadcast. Boss info shown on run strip and score screen. 45 Worker tests pass. |
-| 6 — Shop and consumables | Not started | Depends on 5 catalog and 1B save. |
-| 7 — Boss rounds and events | Not started | Depends on 3, 5, 6. |
-| 8 — Polish | Partial | Screen transitions, score reveal and reduced-motion support; further polish after mechanics stabilize. |
+| 6 — Shop and consumables | **Complete** | Shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1. `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll` endpoints. Shop screen on the frontend with buy/reroll controls. |
+| 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions. Purchase-triggered market events: 25% chance on each joker buy triggers bull surge or flatline shared with all players. Boss info shown on run strip and score screen. 45 Worker tests pass. |
+| 8 — Polish | **Complete** | Screen transitions, score reveal, reduced-motion support, joker visibility on run strip, distinct Boss Round screen, run-strip cell segmentation, shop state hydration on run start. |
 | 9 — Multiplayer hardening | Not started | Continuous, formalized here. |
 | 10 — Release QA | Not started | Final. |
 
@@ -906,26 +906,23 @@ implementation can start immediately if approved.
 
 **Completed**
 
-- Frontend: menu, floor, scoring, and results screens with a hash router; classic board
-  remains reachable from the menu.
-- Server: versioned `RunSaveV1`, migration, start/lock/advance/retire, developer reset,
-  archived classic portfolios, and run-aware leaderboard values.
-- Scoring: base chips from round portfolio return, holding/rising bonuses, diversification
-  multiplier, server-authoritative lock, client preview.
-- Verification: `node --check game.js`, 12 Worker rule tests, Worker typecheck/build, and
-  69 mocked browser checks across 1440/1024/768/390 px including reload resume.
+- Frontend: menu, floor, scoring, results, collection, shop, and boss screens with a hash router; classic board remains reachable from the menu.
+- Server: versioned `RunSaveV1`, migration, start/lock/advance/retire, developer reset, archived classic portfolios, run-aware leaderboard values, `/api/jokers`, `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll`.
+- Scoring: base chips from round portfolio return, holding/rising bonuses, diversification multiplier, joker effects, boss-round restrictions, purchase-triggered market events.
+- Shop: shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1.
+- Polish: screen transitions, score reveal, reduced-motion support, joker visibility on run strip, distinct Boss Round screen, run-strip cell segmentation, shop state hydration on run start.
+- Verification: `node --check game.js`, 45 Worker rule tests (jokers + shop + boss/events), Worker typecheck/build, 88 mocked browser checks across 1440/1024/768/390 px.
 
 **Known gaps**
 
-- No jokers, shop, boss rounds, or run currency yet.
+- Joker slot limits / acquisition caps (shop writes to run save but no slot cap yet).
 - Round ends only on manual lock; there is no tick-boundary model.
 - Run saves store the active account, but a full reconnect/duplicate-action audit is Phase 9.
 - Results screen omits leaderboard placement and run duration.
 
 **Recommended next milestone**
 
-- Phase 5A: joker catalog and declarative effect data, rendered as a read-only collection
-  screen, before acquisition or shop mechanics.
+- Phase 9: Multiplayer hardening (reconnect/duplicate-action audit, joker slot caps, save recovery), then Phase 10 Release QA.
 
 ---
 
