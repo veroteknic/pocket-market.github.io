@@ -1777,18 +1777,19 @@ async function navigate(name, { hash = true } = {}) {
     await transitionScreen(name);
   }
 
-  if (!screenRenderers[name] || screenRenderers[name]() === false) {
-    if (name !== "menu") {
-      await navigate("menu", { hash: false });
-      return;
-    }
-  }
-
-  // Floor needs its own prep + render after transition completes.
+  // Floor is rendered inline (prepareFloor + render); it has no separate
+  // renderer function, so skip the renderer check for it.
   if (name === "floor") {
     await prepareFloor();
     render();
     renderRunStrip();
+  } else {
+    if (!screenRenderers[name] || screenRenderers[name]() === false) {
+      if (name !== "menu") {
+        await navigate("menu", { hash: false });
+        return;
+      }
+    }
   }
 
   if (hash) history.replaceState(null, "", `#${name}`);
