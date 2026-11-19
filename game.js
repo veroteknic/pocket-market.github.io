@@ -1745,7 +1745,6 @@ async function navigate(name, { hash = true } = {}) {
   if (name === "floor" && runState?.phase === "scoring") name = "score";
 
   // Round 3 of each ante is a boss round: present the challenge screen first.
-  // Unless we just came from the boss screen and the player hit "Start round."
   if (name === "floor" && runState && runState.round === runRules.roundsPerAnte && !proceedToFloorAfterBoss) {
     await navigate("boss", { hash: false });
     return;
@@ -1774,22 +1773,32 @@ async function navigate(name, { hash = true } = {}) {
     document.body.dataset.screen !== name;
 
   if (shouldTransition) {
-    await transitionScreen(name);
+    try {
+      await transitionScreen(name);
+    } catch (error) {
+      console.error("Transition error:", error);
+      transitioning = false;
+    }
   }
 
-  // Floor is rendered inline (prepareFloor + render); it has no separate
-  // renderer function, so skip the renderer check for it.
+  // Floor needs its own prep + render after transition completes.
   if (name === "floor") {
     await prepareFloor();
     setScreen("floor");
     render();
     renderRunStrip();
   } else {
-    if (!screenRenderers[name] || screenRenderers[name]() === false) {
-      if (name !== "menu") {
-        await navigate("menu", { hash: false });
-        return;
+    try {
+      if (!screenRenderers[name] || screenRenderers[name]() === false) {
+        if (name !== "menu") {
+          await navigate("menu", { hash: false });
+          return;
+        }
       }
+    } catch (error) {
+      console.error("Renderer error for " + name + ":", error);
+      setScreen("menu");
+      return;
     }
   }
 
