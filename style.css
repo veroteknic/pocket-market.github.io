@@ -611,14 +611,10 @@ button.tap { animation: button-pop 160ms ease-out; }
 
 .screen {
   margin: 0;
-  display: none;
-}
-.screen.is-active {
-  display: block;
   animation: screen-in 260ms ease-out both;
 }
-.screen.is-exiting {
-  animation: screen-out 200ms ease-in both;
+.screen.is-active {
+  animation: none;
 }
 @keyframes screen-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -650,10 +646,7 @@ button.tap { animation: button-pop 160ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .screen, .screen.is-active, .screen.is-exiting, .screen.is-entering {
     animation: none !important;
-    display: block;
   }
-  .screen { display: none; }
-  .screen.is-active { display: block; }
 }
 .screen-menu,
 .screen-score,
