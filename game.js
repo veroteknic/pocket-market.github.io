@@ -20,6 +20,7 @@ let scoreRenderKey = "";
 let jokerCatalog = null;
 let shopState = null;
 let pendingMarketEvent = null;
+let proceedToFloorAfterBoss = false;
 
 // Client-side boss catalog so boss info survives reloads without depending on
 // in-memory state from a previous page visit. Keys match the server-side
@@ -1744,10 +1745,12 @@ async function navigate(name, { hash = true } = {}) {
   if (name === "floor" && runState?.phase === "scoring") name = "score";
 
   // Round 3 of each ante is a boss round: present the challenge screen first.
-  if (name === "floor" && runState && runState.round === runRules.roundsPerAnte) {
+  // Unless we just came from the boss screen and the player hit "Start round."
+  if (name === "floor" && runState && runState.round === runRules.roundsPerAnte && !proceedToFloorAfterBoss) {
     await navigate("boss", { hash: false });
     return;
   }
+  proceedToFloorAfterBoss = false;
 
   const screenRenderers = {
     menu: renderMenu,
@@ -1993,7 +1996,10 @@ $("results-menu").addEventListener("click", () => navigate("menu"));
 $("collection-back").addEventListener("click", () => navigate("menu"));
 $("shop-back").addEventListener("click", () => navigate("menu"));
 $("boss-back").addEventListener("click", () => navigate("menu"));
-$("boss-start").addEventListener("click", () => navigate("floor"));
+$("boss-start").addEventListener("click", () => {
+  proceedToFloorAfterBoss = true;
+  navigate("floor");
+});
 $("setup-start").addEventListener("click", () => navigate("floor"));
 $("intro-start").addEventListener("click", () => navigate("floor"));
 $("ante-complete-continue").addEventListener("click", () => navigate("floor"));
