@@ -2102,14 +2102,19 @@ $("name-form").addEventListener("submit", event => {
   event.preventDefault();
   claimName($("name-input").value.trim(), $("password-input").value);
 });
-newGame();
-renderMenu();
-setScreen("menu");
+try {
+  newGame();
+  renderMenu();
+  setScreen("menu");
+} catch (error) {
+  console.error("Initialization error:", error);
+  // Ensure at least the menu screen is visible
+  setScreen("menu");
+}
 connectToMarket();
 loadPlayer();
 loadDailySummary();
 setInterval(renderLeaderboard, 30000);
-
 if (savedPlayerName) $("name-input").value = savedPlayerName;
 
 async function claimName(name, password) {
