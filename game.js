@@ -1781,6 +1781,7 @@ async function navigate(name, { hash = true } = {}) {
   // renderer function, so skip the renderer check for it.
   if (name === "floor") {
     await prepareFloor();
+    setScreen("floor");
     render();
     renderRunStrip();
   } else {
