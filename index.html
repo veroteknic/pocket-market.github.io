@@ -48,6 +48,7 @@
           </button>
           <button id="menu-collection" class="menu-action" type="button">Collection</button>
           <button id="menu-shop" class="menu-action" type="button">Shop</button>
+          <button id="menu-stats" class="menu-action" type="button">Stats</button>
           <button id="menu-results" class="menu-action" type="button" hidden>View results</button>
           <button id="menu-classic" class="menu-action" type="button">Classic board</button>
         </nav>
@@ -200,6 +201,10 @@
           </div>
         </header>
         <ul id="score-effects" class="score-effects"></ul>
+        <div id="score-jokers" class="score-jokers" hidden>
+          <p class="score-jokers-label">Jokers active this round</p>
+          <div id="score-joker-grid" class="score-joker-grid"></div>
+        </div>
         <div class="score-total">
           <div>
             <span class="score-total-label">Round score</span>
@@ -283,6 +288,187 @@
         </div>
         <div class="boss-actions">
           <button id="boss-start" class="primary-action" type="button">Start round</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-run-setup" class="screen screen-run-setup" data-screen="run-setup" hidden>
+      <div class="setup-shell">
+        <header class="setup-head">
+          <button id="setup-back" class="link-button" type="button">Menu</button>
+          <h2 class="setup-title">New Run</h2>
+          <p id="setup-ante" class="setup-ante">Ante 1 · Round 1 of 3</p>
+        </header>
+        <div class="setup-card">
+          <div class="setup-stats">
+            <div class="setup-stat">
+              <span class="setup-stat-label">Bankroll</span>
+              <strong id="setup-bankroll">$10,000.00</strong>
+            </div>
+            <div class="setup-stat">
+              <span class="setup-stat-label">Target</span>
+              <strong id="setup-target">120</strong>
+            </div>
+            <div class="setup-stat">
+              <span class="setup-stat-label">Jokers</span>
+              <strong id="setup-joker-count">0</strong>
+            </div>
+          </div>
+          <p class="setup-desc" id="setup-desc">Build your portfolio across three rounds. Lock when you're ready to score.</p>
+        </div>
+        <div class="setup-actions">
+          <button id="setup-start" class="primary-action" type="button">Start Run</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-round-intro" class="screen screen-round-intro" data-screen="round-intro" hidden>
+      <div class="intro-shell">
+        <header class="intro-head">
+          <h2 class="intro-title">Round <span id="intro-round">1</span></h2>
+          <p id="intro-ante" class="intro-ante">Ante 1</p>
+        </header>
+        <div class="intro-card">
+          <div class="intro-target">
+            <span class="intro-target-label">Target Score</span>
+            <strong id="intro-target">120</strong>
+          </div>
+          <p id="intro-desc" class="intro-desc">Trade freely, then lock your round to score.</p>
+          <div id="intro-modifiers" class="intro-modifiers"></div>
+        </div>
+        <div class="intro-actions">
+          <button id="intro-start" class="primary-action" type="button">Enter Market</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-ante-complete" class="screen screen-ante-complete" data-screen="ante-complete" hidden>
+      <div class="ante-shell">
+        <header class="ante-head">
+          <h2 class="ante-title">Ante <span id="ante-complete-number">1</span> Complete</h2>
+          <p id="ante-complete-desc" class="ante-complete-desc">You've cleared the ante. Prepare for the next challenge.</p>
+        </header>
+        <div class="ante-card">
+          <div class="ante-stats">
+            <div class="ante-stat">
+              <span class="ante-stat-label">Ante Score</span>
+              <strong id="ante-complete-score">0</strong>
+            </div>
+            <div class="ante-stat">
+              <span class="ante-stat-label">Rounds Cleared</span>
+              <strong id="ante-complete-rounds">3</strong>
+            </div>
+            <div class="ante-stat">
+              <span class="ante-stat-label">Next Target</span>
+              <strong id="ante-complete-next-target">—</strong>
+            </div>
+          </div>
+        </div>
+        <div class="ante-actions">
+          <button id="ante-complete-continue" class="primary-action" type="button">Continue</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-run-victory" class="screen screen-run-victory" data-screen="run-victory" hidden>
+      <div class="victory-shell">
+        <header class="victory-head">
+          <h2 class="victory-title">Run Complete</h2>
+          <p class="victory-subtitle">You conquered all eight antes.</p>
+        </header>
+        <div class="victory-card">
+          <div class="victory-stats">
+            <div class="victory-stat">
+              <span class="victory-stat-label">Final Score</span>
+              <strong id="victory-score">0</strong>
+            </div>
+            <div class="victory-stat">
+              <span class="victory-stat-label">Antes Cleared</span>
+              <strong id="victory-antes">8</strong>
+            </div>
+            <div class="victory-stat">
+              <span class="victory-stat-label">Best Round</span>
+              <strong id="victory-best-round">0</strong>
+            </div>
+          </div>
+          <div id="victory-jokers" class="victory-jokers">
+            <h3 class="victory-jokers-label">Jokers Collected</h3>
+            <div id="victory-joker-grid" class="victory-joker-grid"></div>
+          </div>
+        </div>
+        <div class="victory-actions">
+          <button id="victory-new-run" class="primary-action" type="button">New Run</button>
+          <button id="victory-menu" class="link-button" type="button">Menu</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-run-failure" class="screen screen-run-failure" data-screen="run-failure" hidden>
+      <div class="failure-shell">
+        <header class="failure-head">
+          <h2 class="failure-title">Run Ended</h2>
+          <p class="failure-subtitle">You missed the target. The run is over.</p>
+        </header>
+        <div class="failure-card">
+          <div class="failure-stats">
+            <div class="failure-stat">
+              <span class="failure-stat-label">Final Score</span>
+              <strong id="failure-score">0</strong>
+            </div>
+            <div class="failure-stat">
+              <span class="failure-stat-label">Antes Cleared</span>
+              <strong id="failure-antes">0</strong>
+            </div>
+            <div class="failure-stat">
+              <span class="failure-stat-label">Rounds Survived</span>
+              <strong id="failure-rounds">0</strong>
+            </div>
+          </div>
+          <div id="failure-jokers" class="failure-jokers">
+            <h3 class="failure-jokers-label">Jokers Collected</h3>
+            <div id="failure-joker-grid" class="failure-joker-grid"></div>
+          </div>
+        </div>
+        <div class="failure-actions">
+          <button id="failure-new-run" class="primary-action" type="button">New Run</button>
+          <button id="failure-menu" class="link-button" type="button">Menu</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-run-stats" class="screen screen-run-stats" data-screen="run-stats" hidden>
+      <div class="stats-shell">
+        <header class="stats-head">
+          <button id="stats-back" class="link-button" type="button">Menu</button>
+          <h2 class="stats-title">Run Statistics</h2>
+        </header>
+        <div class="stats-card">
+          <div class="stats-grid">
+            <div class="stats-stat">
+              <span class="stats-stat-label">Total Runs</span>
+              <strong id="stats-total-runs">0</strong>
+            </div>
+            <div class="stats-stat">
+              <span class="stats-stat-label">Best Score</span>
+              <strong id="stats-best-score">0</strong>
+            </div>
+            <div class="stats-stat">
+              <span class="stats-stat-label">Antes Cleared</span>
+              <strong id="stats-antes-cleared">0</strong>
+            </div>
+            <div class="stats-stat">
+              <span class="stats-stat-label">Rounds Survived</span>
+              <strong id="stats-rounds-survived">0</strong>
+            </div>
+          </div>
+          <div id="stats-jokers" class="stats-jokers">
+            <h3 class="stats-jokers-label">Joker Collection</h3>
+            <div id="stats-joker-grid" class="stats-joker-grid"></div>
+          </div>
+        </div>
+        <div class="stats-actions">
+          <button id="stats-new-run" class="primary-action" type="button">New Run</button>
+          <button id="stats-menu" class="link-button" type="button">Menu</button>
         </div>
       </div>
     </section>

@@ -7,12 +7,13 @@ const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
 const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
 const RUN_RULES_FALLBACK = { antes: 8, roundsPerAnte: 3, startingCash: 10000 };
-const SCREEN_NAMES = ["menu", "floor", "score", "results", "collection", "shop", "boss"];
+const SCREEN_NAMES = ["menu", "run-setup", "round-intro", "floor", "score", "ante-complete", "boss", "results", "run-victory", "run-failure", "run-stats", "collection", "shop"];
 let runRules = { ...RUN_RULES_FALLBACK };
 let runState = null;
 let lastRoundResult = null;
 let floorMode = "classic";
 let activeScreen = "menu";
+let transitioning = false;
 let runBusy = false;
 let scoreAnimationToken = 0;
 let scoreRenderKey = "";
@@ -209,6 +210,8 @@ function cue(name) {
     tone(760, { duration: 0.05, gain: 0.05 });
   } else if (name === "score") {
     [523, 659, 784, 1046].forEach((frequency, index) => tone(frequency, { duration: 0.18, gain: 0.08, delay: index * 0.07 }));
+  } else if (name === "joker") {
+    [659, 988, 1319].forEach((frequency, index) => tone(frequency, { duration: 0.15, gain: 0.1, delay: index * 0.06 }));
   } else if (name === "fail") {
     [330, 262, 196].forEach((frequency, index) => tone(frequency, { duration: 0.2, type: "sawtooth", gain: 0.07, delay: index * 0.09 }));
   }
@@ -898,9 +901,54 @@ async function renderLeaderboard() {
 function setScreen(name) {
   activeScreen = name;
   document.querySelectorAll(".screen").forEach(section => {
-    section.hidden = section.dataset.screen !== name;
+    const isActive = section.dataset.screen === name;
+    section.classList.toggle("is-active", isActive);
+    section.classList.remove("is-exiting", "is-entering");
+    if (!isActive) section.hidden = true;
   });
   document.body.dataset.screen = name;
+  const active = document.querySelector(`[data-screen="${name}"]`);
+  if (active) active.hidden = false;
+}
+
+function transitionScreen(nextName, opts = {}) {
+  return new Promise(resolve => {
+    if (transitioning) {
+      resolve();
+      return;
+    }
+    const current = document.body.dataset.screen || "menu";
+    if (current === nextName) {
+      resolve();
+      return;
+    }
+    transitioning = true;
+    const activeEl = document.querySelector("[data-screen=\"" + current + "\"]");
+    const nextEl = document.querySelector("[data-screen=\"" + nextName + "\"]");
+    const dramatic = !!opts.dramatic;
+    if (activeEl) {
+      activeEl.classList.add("is-exiting");
+      if (dramatic) activeEl.classList.add("dramatic");
+    }
+    if (nextEl) {
+      nextEl.hidden = false;
+      nextEl.classList.add("is-entering");
+      if (dramatic) nextEl.classList.add("dramatic");
+    }
+    const duration = reducedMotion.matches ? 0 : (dramatic ? 340 : 240);
+    setTimeout(() => {
+      activeScreen = nextName;
+      document.body.dataset.screen = nextName;
+      document.querySelectorAll(".screen").forEach(section => {
+        section.classList.remove("is-active", "is-exiting", "is-entering", "dramatic");
+        section.hidden = section.dataset.screen !== nextName;
+      });
+      if (nextEl) nextEl.hidden = false;
+      transitioning = false;
+      if (opts.onEnter) opts.onEnter();
+      resolve();
+    }, duration);
+  });
 }
 
 function runRulesFrom(payload) {
@@ -957,6 +1005,7 @@ function renderMenu() {
   const classicButton = $("menu-classic");
   const collectionButton = $("menu-collection");
   const shopButton = $("menu-shop");
+  const statsButton = $("menu-stats");
   const primary = $("menu-primary");
   const label = $("menu-primary-label");
   const note = $("menu-primary-note");
@@ -971,6 +1020,8 @@ function renderMenu() {
   collectionButton.disabled = runBusy;
   shopButton.hidden = !runState;
   shopButton.disabled = runBusy;
+  statsButton.hidden = false;
+  statsButton.disabled = runBusy;
   primary.disabled = runBusy;
 
   if (!runState) {
@@ -1073,6 +1124,7 @@ function playScoreSequence(result) {
   const token = scoreAnimationToken;
   const rows = [...$("score-effects").children];
   rows.forEach(row => row.classList.remove("revealed"));
+  clearScoreJokers();
   $("score-final").textContent = "0";
   $("score-meter-fill").style.width = "0%";
   setScoreVerdict(result, { clear: true });
@@ -1092,6 +1144,17 @@ function playScoreSequence(result) {
     row.classList.add("revealed");
     const amount = Number(row.dataset.value);
     animateNumber(row.querySelector(".value"), 0, amount, value => formatEffectAmount(row.dataset.kind, value), 260);
+    // Activate the matching Joker card when its effect is revealed, so the
+    // player can see which card fired and in what order.
+    const jokerId = row.dataset.jokerId;
+    if (jokerId) {
+      const card = $(`score-joker-${jokerId}`);
+      if (card) {
+        card.classList.add("is-activated");
+        setTimeout(() => card.classList.remove("is-activated"), 400);
+        cue("joker");
+      }
+    }
     cue("tick");
     setTimeout(() => step(index + 1), reducedMotion.matches ? 0 : 280);
   };
@@ -1114,11 +1177,16 @@ function renderScoreScreen() {
   $("score-target").textContent = Number(result.target).toLocaleString();
   const list = $("score-effects");
   list.replaceChildren();
+  const activeJokerIds = [];
   result.effects.forEach(effect => {
     const row = document.createElement("li");
     row.className = "score-effect";
     row.dataset.kind = effect.kind;
     row.dataset.value = String(effect.value);
+    if (effect.jokerId) {
+      row.dataset.jokerId = effect.jokerId;
+      if (!activeJokerIds.includes(effect.jokerId)) activeJokerIds.push(effect.jokerId);
+    }
     const label = document.createElement("span");
     label.className = "score-effect-label";
     label.textContent = effect.label;
@@ -1133,6 +1201,8 @@ function renderScoreScreen() {
     row.append(label, value);
     list.append(row);
   });
+
+  renderScoreJokers(activeJokerIds);
 
   const lastRound = result.round >= runRules.roundsPerAnte;
   const lastAnte = result.ante >= runRules.antes;
@@ -1151,6 +1221,282 @@ function renderScoreScreen() {
     playScoreSequence(result);
   }
   return true;
+}
+
+function renderScoreJokers(jokerIds) {
+  const grid = $("score-joker-grid");
+  const shell = $("score-jokers");
+  if (!grid || !shell) return;
+  grid.replaceChildren();
+  if (!jokerCatalog || !jokerIds.length) {
+    shell.hidden = true;
+    return;
+  }
+  shell.hidden = false;
+  const byId = {};
+  jokerCatalog.jokers.forEach(j => { byId[j.id] = j; });
+  for (const id of jokerIds) {
+    const joker = byId[id];
+    if (!joker) continue;
+    const card = document.createElement("article");
+    card.className = "score-joker-card card";
+    card.dataset.rarity = joker.rarity;
+    card.id = `score-joker-${joker.id}`;
+    card.innerHTML = `
+      <div class="score-joker-glyph">${joker.glyph}</div>
+      <div class="score-joker-name">${joker.name}</div>
+      <span class="score-joker-rarity">${joker.rarity.charAt(0).toUpperCase() + joker.rarity.slice(1)}</span>
+      <span class="score-joker-value">+${joker.value}</span>
+    `;
+    grid.append(card);
+  }
+}
+
+function clearScoreJokers() {
+  const grid = $("score-joker-grid");
+  const shell = $("score-jokers");
+  if (!grid) return;
+  [...grid.children].forEach(card => card.classList.remove("is-activated"));
+  if (shell) shell.hidden = true;
+}
+
+// ---------- New screen renderers ----------
+
+function renderRunSetupScreen() {
+  const bankroll = $("setup-bankroll");
+  const target = $("setup-target");
+  const jokerCount = $("setup-joker-count");
+  const desc = $("setup-desc");
+  const button = $("setup-start");
+  if (!bankroll || !target || !jokerCount || !desc || !button) return false;
+
+  bankroll.textContent = money(RUN_RULES.startingCash);
+  target.textContent = Number(targetForRoundClient(1, 1)).toLocaleString();
+  const owned = runState ? (runState.jokers || []).length : 0;
+  jokerCount.textContent = String(owned);
+  desc.textContent = runState && runState.jokers && runState.jokers.length
+    ? `You own ${runState.jokers.length} joker${runState.jokers.length === 1 ? "" : "s"}. Lock when you're ready to score.`
+    : "Build your portfolio across three rounds. Lock when you're ready to score.";
+  button.textContent = runState ? "Resume Run" : "Start Run";
+  return true;
+}
+
+function renderRoundIntroScreen() {
+  const roundEl = $("intro-round");
+  const anteEl = $("intro-ante");
+  const targetEl = $("intro-target");
+  const desc = $("intro-desc");
+  const modifiers = $("intro-modifiers");
+  const button = $("intro-start");
+  if (!roundEl || !anteEl || !targetEl || !desc || !modifiers || !button) return false;
+
+  const ante = runState.ante;
+  const round = runState.round;
+  const target = Number(runState.target).toLocaleString();
+  roundEl.textContent = String(round);
+  anteEl.textContent = `Ante ${ante}`;
+  targetEl.textContent = target;
+  desc.textContent = round === runRules.roundsPerAnte
+    ? "Boss round — a special restriction applies. Lock when you're ready."
+    : "Trade freely, then lock your round to score.";
+
+  modifiers.replaceChildren();
+  const isBoss = round === runRules.roundsPerAnte;
+  if (isBoss) {
+    const boss = bossForAnteClient(ante);
+    if (boss) {
+      const item = document.createElement("div");
+      item.className = "intro-modifier";
+      item.innerHTML = `
+        <span class="intro-modifier-label">Boss Rule</span>
+        <span class="intro-modifier-value">${boss.name}</span>
+        <span class="intro-modifier-desc">${boss.detail}</span>
+      `;
+      modifiers.append(item);
+    }
+  } else {
+    const item = document.createElement("div");
+    item.className = "intro-modifier";
+    item.innerHTML = `
+      <span class="intro-modifier-label">Target</span>
+      <span class="intro-modifier-value">${target} chips</span>
+    `;
+    modifiers.append(item);
+  }
+  button.textContent = isBoss ? "Face Boss" : "Enter Market";
+  return true;
+}
+
+function renderAnteCompleteScreen() {
+  const numberEl = $("ante-complete-number");
+  const descEl = $("ante-complete-desc");
+  const scoreEl = $("ante-complete-score");
+  const roundsEl = $("ante-complete-rounds");
+  const nextTargetEl = $("ante-complete-next-target");
+  const button = $("ante-complete-continue");
+  if (!numberEl || !descEl || !scoreEl || !roundsEl || !nextTargetEl || !button) return false;
+
+  numberEl.textContent = String(runState.ante);
+  descEl.textContent = runState.ante >= runRules.antes
+    ? "You've cleared every ante. The run is complete."
+    : "Ante cleared. The market resets for the next challenge.";
+  scoreEl.textContent = Number(runState.scoreTotal || 0).toLocaleString();
+  roundsEl.textContent = String(runRules.roundsPerAnte);
+  const nextTarget = runState.ante >= runRules.antes
+    ? "—"
+    : Number(targetForRoundClient(runState.ante + 1, 1)).toLocaleString();
+  nextTargetEl.textContent = nextTarget;
+  button.textContent = runState.ante >= runRules.antes ? "Finish Run" : "Continue";
+  return true;
+}
+
+function renderVictoryScreen() {
+  const scoreEl = $("victory-score");
+  const antesEl = $("victory-antes");
+  const bestEl = $("victory-best-round");
+  const grid = $("victory-joker-grid");
+  if (!scoreEl || !antesEl || !bestEl || !grid) return false;
+
+  scoreEl.textContent = Number(runState.scoreTotal || 0).toLocaleString();
+  antesEl.textContent = String(runRules.antes);
+  bestEl.textContent = Number(runState.bestRoundScore || 0).toLocaleString();
+
+  grid.replaceChildren();
+  const owned = runState.jokers || [];
+  if (!owned.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "—";
+    grid.append(empty);
+    return true;
+  }
+  const byId = {};
+  jokerCatalog.jokers.forEach(j => { byId[j.id] = j; });
+  for (const id of owned) {
+    const joker = byId[id];
+    if (!joker) continue;
+    const card = document.createElement("article");
+    card.className = "victory-joker-card card";
+    card.dataset.rarity = joker.rarity;
+    card.innerHTML = `
+      <div class="victory-joker-glyph">${joker.glyph}</div>
+      <div class="victory-joker-name">${joker.name}</div>
+      <span class="victory-joker-rarity">${joker.rarity.charAt(0).toUpperCase() + joker.rarity.slice(1)}</span>
+    `;
+    grid.append(card);
+  }
+  return true;
+}
+
+function renderFailureScreen() {
+  const scoreEl = $("failure-score");
+  const antesEl = $("failure-antes");
+  const roundsEl = $("failure-rounds");
+  const grid = $("failure-joker-grid");
+  if (!scoreEl || !antesEl || !roundsEl || !grid) return false;
+
+  const completedAntes = runState.completedAntes || 0;
+  const reachedRound = runState.round;
+  scoreEl.textContent = Number(runState.scoreTotal || 0).toLocaleString();
+  antesEl.textContent = `${completedAntes} / ${runRules.antes}`;
+  roundsEl.textContent = String(reachedRound);
+
+  grid.replaceChildren();
+  const owned = runState.jokers || [];
+  if (!owned.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "—";
+    grid.append(empty);
+    return true;
+  }
+  const byId = {};
+  jokerCatalog.jokers.forEach(j => { byId[j.id] = j; });
+  for (const id of owned) {
+    const joker = byId[id];
+    if (!joker) continue;
+    const card = document.createElement("article");
+    card.className = "failure-joker-card card";
+    card.dataset.rarity = joker.rarity;
+    card.innerHTML = `
+      <div class="failure-joker-glyph">${joker.glyph}</div>
+      <div class="failure-joker-name">${joker.name}</div>
+      <span class="failure-joker-rarity">${joker.rarity.charAt(0).toUpperCase() + joker.rarity.slice(1)}</span>
+    `;
+    grid.append(card);
+  }
+  return true;
+}
+
+function renderStatsScreen() {
+  const totalRunsEl = $("stats-total-runs");
+  const bestScoreEl = $("stats-best-score");
+  const antesClearedEl = $("stats-antes-cleared");
+  const roundsSurvivedEl = $("stats-rounds-survived");
+  const grid = $("stats-joker-grid");
+  if (!totalRunsEl || !bestScoreEl || !antesClearedEl || !roundsSurvivedEl || !grid) return false;
+
+  // Career stats live in localStorage so they survive run resets.
+  const stats = JSON.parse(localStorage.getItem("pocket-market-career-stats") || "{}");
+  const totalRuns = Number(stats.totalRuns || 0);
+  const bestScore = Number(stats.bestScore || 0);
+  const antesCleared = Number(stats.antesCleared || 0);
+  const roundsSurvived = Number(stats.roundsSurvived || 0);
+
+  totalRunsEl.textContent = String(totalRuns);
+  bestScoreEl.textContent = Number(bestScore).toLocaleString();
+  antesClearedEl.textContent = `${antesCleared} / ${runRules.antes}`;
+  roundsSurvivedEl.textContent = String(roundsSurvived);
+
+  grid.replaceChildren();
+  const allJokers = jokerCatalog ? jokerCatalog.jokers : [];
+  const discovered = new Set(stats.discoveredJokers || []);
+  let any = false;
+  for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
+    const group = allJokers.filter(j => j.rarity === rarity);
+    if (!group.length) continue;
+    const header = document.createElement("h3");
+    header.className = "stats-rarity";
+    header.textContent = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+    grid.append(header);
+    for (const joker of group) {
+      const card = document.createElement("article");
+      card.className = "stats-joker-card card";
+      card.dataset.rarity = joker.rarity;
+      card.style.opacity = discovered.has(joker.id) ? "1" : "0.35";
+      card.innerHTML = `
+        <div class="stats-joker-glyph">${joker.glyph}</div>
+        <div class="stats-joker-name">${joker.name}</div>
+        <span class="stats-joker-rarity">${joker.rarity.charAt(0).toUpperCase() + joker.rarity.slice(1)}</span>
+      `;
+      grid.append(card);
+      any = true;
+    }
+  }
+  if (!any) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "—";
+    grid.append(empty);
+  }
+  return true;
+}
+
+function recordCareerStats(run) {
+  const stats = JSON.parse(localStorage.getItem("pocket-market-career-stats") || "{}");
+  stats.totalRuns = Number(stats.totalRuns || 0) + 1;
+  stats.bestScore = Math.max(Number(stats.bestScore || 0), Number(run.scoreTotal || 0));
+  stats.antesCleared = Math.max(Number(stats.antesCleared || 0), Number(run.completedAntes || 0));
+  stats.roundsSurvived = Number(stats.roundsSurvived || 0) + (run.roundHistory ? run.roundHistory.length : 0);
+  const discovered = new Set(stats.discoveredJokers || []);
+  for (const id of run.jokers || []) discovered.add(id);
+  stats.discoveredJokers = [...discovered];
+  localStorage.setItem("pocket-market-career-stats", JSON.stringify(stats));
+}
+
+function targetForRoundClient(ante, round) {
+  const index = (ante - 1) * runRules.roundsPerAnte + (round - 1);
+  return Math.round((120 + 15 * index + 0.6 * index * index) / 5) * 5;
 }
 
 function renderResultsScreen() {
@@ -1247,7 +1593,7 @@ function renderCollectionScreen() {
     grid.append(header);
     for (const joker of group) {
       const card = document.createElement("article");
-      card.className = "joker-card";
+      card.className = "joker-card card";
       card.dataset.rarity = rarity;
       card.innerHTML = `
         <div class="joker-glyph">${joker.glyph}</div>
@@ -1306,7 +1652,7 @@ function renderShopScreen() {
     grid.append(header);
     for (const { joker, offer } of group) {
       const card = document.createElement("article");
-      card.className = "shop-card";
+      card.className = "shop-card card";
       card.dataset.rarity = rarity;
       card.dataset.jokerId = joker.id;
       const owned = shopState.owned.includes(joker.id);
@@ -1397,39 +1743,49 @@ async function navigate(name, { hash = true } = {}) {
   if ((name === "score" || name === "results") && !runState) name = "menu";
   if (name === "floor" && runState?.phase === "scoring") name = "score";
 
-  if (name === "floor") {
-    // Round 3 of each ante is a boss round: present the challenge screen first.
-    if (runState && runState.round === runRules.roundsPerAnte) {
-      await navigate("boss", { hash: false });
+  // Round 3 of each ante is a boss round: present the challenge screen first.
+  if (name === "floor" && runState && runState.round === runRules.roundsPerAnte) {
+    await navigate("boss", { hash: false });
+    return;
+  }
+
+  const screenRenderers = {
+    menu: renderMenu,
+    "run-setup": renderRunSetupScreen,
+    "round-intro": renderRoundIntroScreen,
+    score: renderScoreScreen,
+    results: renderResultsScreen,
+    "ante-complete": renderAnteCompleteScreen,
+    boss: renderBossScreen,
+    collection: renderCollectionScreen,
+    shop: renderShopScreen,
+    "run-victory": renderVictoryScreen,
+    "run-failure": renderFailureScreen,
+    "run-stats": renderStatsScreen,
+  };
+
+  const shouldTransition =
+    name !== "floor" &&
+    !transitioning &&
+    document.body.dataset.screen &&
+    document.body.dataset.screen !== name;
+
+  if (shouldTransition) {
+    await transitionScreen(name);
+  }
+
+  if (!screenRenderers[name] || screenRenderers[name]() === false) {
+    if (name !== "menu") {
+      await navigate("menu", { hash: false });
       return;
     }
+  }
+
+  // Floor needs its own prep + render after transition completes.
+  if (name === "floor") {
     await prepareFloor();
-    // Reveal the board before drawing so the chart measures a laid-out canvas.
-    setScreen("floor");
     render();
-  } else {
-    if (name === "menu") renderMenu();
-    if (name === "score" && !renderScoreScreen()) {
-      name = "menu";
-      renderMenu();
-    }
-    if (name === "results" && !renderResultsScreen()) {
-      name = "menu";
-      renderMenu();
-    }
-    if (name === "collection" && !renderCollectionScreen()) {
-      name = "menu";
-      renderMenu();
-    }
-    if (name === "shop" && !renderShopScreen()) {
-      name = "menu";
-      renderMenu();
-    }
-    if (name === "boss" && !renderBossScreen()) {
-      name = "menu";
-      renderMenu();
-    }
-    setScreen(name);
+    renderRunStrip();
   }
 
   if (hash) history.replaceState(null, "", `#${name}`);
@@ -1438,25 +1794,8 @@ async function navigate(name, { hash = true } = {}) {
 
 async function routeAfterAuth() {
   const hash = location.hash.replace(/^#/, "");
-  if (hash === "menu") {
-    renderMenu();
-    setScreen("menu");
-    return;
-  }
-  if (hash === "floor") {
-    await navigate("floor");
-    return;
-  }
-  if (hash === "collection") {
-    await navigate("collection");
-    return;
-  }
-  if (hash === "shop") {
-    await navigate("shop");
-    return;
-  }
-  if (hash === "boss") {
-    await navigate("boss");
+  if (SCREEN_NAMES.includes(hash)) {
+    await navigate(hash);
     return;
   }
   if (!runState) {
@@ -1486,7 +1825,7 @@ async function startRun() {
     scoreRenderKey = "";
     applyRunAccount();
     await loadShopState();
-    await navigate("floor");
+    await navigate("run-setup");
   } catch (error) {
     $("menu-error").textContent = error instanceof Error ? error.message : "Run unavailable.";
     await loadRunState();
@@ -1532,7 +1871,15 @@ async function advanceRunRound() {
     lastRoundResult = null;
     scoreRenderKey = "";
     applyRunAccount();
-    await navigate(runState.phase === "trading" ? "floor" : "results");
+    if (runState.phase === "results") {
+      await navigate("results");
+    } else if (runState.round === runRules.roundsPerAnte) {
+      await navigate("boss");
+    } else if (runState.round === 1 && runState.ante > 1) {
+      await navigate("ante-complete");
+    } else {
+      await navigate("floor");
+    }
   } catch (error) {
     $("score-verdict").textContent = error instanceof Error ? error.message : "Advance failed.";
     $("score-verdict").className = "score-verdict fail";
@@ -1637,6 +1984,7 @@ $("menu-results").addEventListener("click", () => navigate("results"));
 $("menu-classic").addEventListener("click", () => navigate("floor"));
 $("menu-collection").addEventListener("click", () => navigate("collection"));
 $("menu-shop").addEventListener("click", () => navigate("shop"));
+$("menu-stats").addEventListener("click", () => navigate("run-stats"));
 $("score-menu").addEventListener("click", () => navigate("menu"));
 $("score-next").addEventListener("click", advanceRunRound);
 $("results-new-run").addEventListener("click", startRun);
@@ -1646,6 +1994,15 @@ $("collection-back").addEventListener("click", () => navigate("menu"));
 $("shop-back").addEventListener("click", () => navigate("menu"));
 $("boss-back").addEventListener("click", () => navigate("menu"));
 $("boss-start").addEventListener("click", () => navigate("floor"));
+$("setup-start").addEventListener("click", () => navigate("floor"));
+$("intro-start").addEventListener("click", () => navigate("floor"));
+$("ante-complete-continue").addEventListener("click", () => navigate("floor"));
+$("victory-new-run").addEventListener("click", startRun);
+$("victory-menu").addEventListener("click", () => navigate("menu"));
+$("failure-new-run").addEventListener("click", startRun);
+$("failure-menu").addEventListener("click", () => navigate("menu"));
+$("stats-back").addEventListener("click", () => navigate("menu"));
+$("stats-new-run").addEventListener("click", startRun);
 $("shop-reroll").addEventListener("click", rerollShop);
 $("shop-grid").addEventListener("click", event => {
   const button = event.target.closest("button.shop-buy");
