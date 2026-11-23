@@ -770,10 +770,19 @@ async function loadPlayer() {
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/player`, { credentials: "include" });
     if (!response.ok) {
-      if (savedPlayerName) $("name-input").value = savedPlayerName;
+      // Not signed in: show the login/register form. The gate is hidden briefly
+      // on boot so a failed auth request can never leave a permanent black screen.
+      if (savedPlayerName) {
+        $("name-input").value = savedPlayerName;
+        authMode = "login";
+        $("auth-title").textContent = "Log in";
+        $("auth-submit").textContent = "Log in";
+        $("auth-toggle").textContent = "Create an account";
+        $("password-input").autocomplete = "current-password";
+      }
       await loadRunState();
       renderMenu();
-      $("identity-gate").hidden = true;
+      $("identity-gate").hidden = false;
       return;
     }
     const player = await response.json();
