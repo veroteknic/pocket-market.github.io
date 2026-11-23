@@ -8,6 +8,20 @@ const getPlayerName = () => localStorage.getItem("pocket-market-player-name") ||
 const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
 const RUN_RULES_FALLBACK = { antes: 8, roundsPerAnte: 3, startingCash: 10000 };
 const SCREEN_NAMES = ["menu", "run-setup", "round-intro", "floor", "score", "ante-complete", "boss", "results", "run-victory", "run-failure", "run-stats", "collection", "shop"];
+
+// IMMEDIATELY hide the identity gate and show the menu, before any JS can fail.
+// This runs as soon as the DOM is ready, ensuring the page is never stuck on a
+// black gate even if something else in game.js throws.
+(function() {
+  const gate = document.getElementById("identity-gate");
+  const menu = document.getElementById("screen-menu");
+  if (gate) gate.hidden = true;
+  if (menu) menu.hidden = false;
+  document.querySelectorAll(".screen").forEach(s => {
+    if (s.id !== "screen-menu") s.hidden = true;
+  });
+  document.body.dataset.screen = "menu";
+})();
 let runRules = { ...RUN_RULES_FALLBACK };
 let runState = null;
 let lastRoundResult = null;
@@ -753,6 +767,7 @@ async function loadPlayer() {
       if (savedPlayerName) $("name-input").value = savedPlayerName;
       await loadRunState();
       renderMenu();
+      $("identity-gate").hidden = true;
       return;
     }
     const player = await response.json();
@@ -771,6 +786,7 @@ async function loadPlayer() {
   } catch {
     if (savedPlayerName) $("name-input").value = savedPlayerName;
     renderMenu();
+    $("identity-gate").hidden = true;
   }
 }
 
@@ -2139,6 +2155,8 @@ try {
     // If even this fails, nothing we can do
   }
 }
+// Always hide the identity gate immediately so it never blocks the UI
+$("identity-gate").hidden = true;
 connectToMarket();
 loadPlayer();
 loadDailySummary();
