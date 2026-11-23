@@ -1757,60 +1757,49 @@ async function navigate(name, { hash = true } = {}) {
   }
   proceedToFloorAfterBoss = false;
 
-  const screenRenderers = {
-    menu: renderMenu,
-    "run-setup": renderRunSetupScreen,
-    "round-intro": renderRoundIntroScreen,
-    score: renderScoreScreen,
-    results: renderResultsScreen,
-    "ante-complete": renderAnteCompleteScreen,
-    boss: renderBossScreen,
-    collection: renderCollectionScreen,
-    shop: renderShopScreen,
-    "run-victory": renderVictoryScreen,
-    "run-failure": renderFailureScreen,
-    "run-stats": renderStatsScreen,
-  };
+  // Hide all screens, show target
+  document.querySelectorAll(".screen").forEach(s => s.hidden = true);
+  const target = document.getElementById("screen-" + name);
+  if (target) target.hidden = false;
+  activeScreen = name;
+  document.body.dataset.screen = name;
 
-  const shouldTransition =
-    name !== "floor" &&
-    !transitioning &&
-    document.body.dataset.screen &&
-    document.body.dataset.screen !== name;
-
-  if (shouldTransition) {
-    try {
-      await transitionScreen(name);
-    } catch (error) {
-      console.error("Transition error:", error);
-      transitioning = false;
+  // Render the target screen's content
+  try {
+    if (name === "floor") {
+      await prepareFloor();
+      render();
+      renderRunStrip();
+    } else if (name === "menu") {
+      renderMenu();
+    } else if (name === "score") {
+      renderScoreScreen();
+    } else if (name === "results") {
+      renderResultsScreen();
+    } else if (name === "collection") {
+      renderCollectionScreen();
+    } else if (name === "shop") {
+      renderShopScreen();
+    } else if (name === "boss") {
+      renderBossScreen();
+    } else if (name === "run-setup") {
+      renderRunSetupScreen();
+    } else if (name === "round-intro") {
+      renderRoundIntroScreen();
+    } else if (name === "ante-complete") {
+      renderAnteCompleteScreen();
+    } else if (name === "run-victory") {
+      renderVictoryScreen();
+    } else if (name === "run-failure") {
+      renderFailureScreen();
+    } else if (name === "run-stats") {
+      renderStatsScreen();
     }
+  } catch (error) {
+    console.error("Render error for " + name + ":", error);
   }
 
-  // Floor needs its own prep + render after transition completes.
-  if (name === "floor") {
-    await prepareFloor();
-    setScreen("floor");
-    render();
-    renderRunStrip();
-  } else {
-    try {
-      if (!screenRenderers[name] || screenRenderers[name]() === false) {
-        if (name !== "menu") {
-          await navigate("menu", { hash: false });
-          return;
-        }
-      }
-    } catch (error) {
-      console.error("Renderer error for " + name + ":", error);
-      setScreen("menu");
-      return;
-    }
-    // Always show the target screen (renderer doesn't call setScreen)
-    setScreen(name);
-  }
-
-  if (hash) history.replaceState(null, "", `#${name}`);
+  if (hash) history.replaceState(null, "", "#" + name);
   if (name !== "floor") window.scrollTo(0, 0);
 }
 
