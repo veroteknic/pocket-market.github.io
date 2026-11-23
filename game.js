@@ -1800,6 +1800,8 @@ async function navigate(name, { hash = true } = {}) {
       setScreen("menu");
       return;
     }
+    // Always show the target screen (renderer doesn't call setScreen)
+    setScreen(name);
   }
 
   if (hash) history.replaceState(null, "", `#${name}`);
