@@ -2750,6 +2750,44 @@ body.dev-open { padding-right: 410px; }
   color: var(--faint);
   font: 600 22px/1 var(--display);
 }
+.hud-target {
+  min-width: 132px;
+  padding: 12px 18px;
+  border: 1px solid var(--brass);
+  border-radius: 3px;
+  background: #1b1610;
+  color: var(--ink);
+}
+.hud-target > span:first-child {
+  display: block;
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.hud-target strong {
+  display: block;
+  margin-top: 8px;
+  font: 400 clamp(24px, 4vw, 38px)/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.hud-target-bar {
+  display: block;
+  height: 3px;
+  margin-top: 9px;
+  background: var(--line);
+  overflow: hidden;
+}
+.hud-target-bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--gold);
+  transition: width 240ms ease;
+}
+.hud-target.is-pass { border-color: var(--green); }
+.hud-target.is-pass > span:first-child { color: var(--green); }
+.hud-target.is-pass .hud-target-bar i { background: var(--green); }
 
 .score-breakdown .score-line {
   padding: 0;
@@ -2929,11 +2967,196 @@ body.dev-open { padding-right: 410px; }
   .screen-floor .masthead, .screen-portfolio .masthead, .screen-jokers .masthead { flex-wrap: wrap; }
   .score-hud { flex-wrap: wrap; }
   .hud-chip, .hud-mult { flex: 1; min-width: 130px; }
-  .hud-score { flex: 1 0 100%; }
+  .hud-score, .hud-target { flex: 1 1 140px; min-width: 140px; }
   .portfolio-metrics { grid-template-columns: repeat(2, 1fr); }
   .shop-art.joker-art { height: 76px; }
   .score-joker-art.joker-art { height: 36px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .active-joker-card { animation: none !important; }
+}
+
+/* ---------- Arcade playfield pass ----------
+   The market rows become physical card objects on desktop while keeping the
+   same table markup, IDs and controls. The joker rail mirrors a collectible
+   card row: compact artwork, rarity edge, one click into the full Jokers view. */
+
+.market-joker-rail {
+  margin: 0 0 14px;
+  padding: 10px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.market-joker-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: var(--faint);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.market-joker-head small { color: var(--gold); font-size: 10px; }
+.market-joker-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.market-joker-card {
+  width: 94px;
+  padding: 6px 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-top: 2px solid var(--line-bright);
+  border-radius: 5px;
+  background: #17130e;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+.market-joker-card:hover,
+.market-joker-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--brass);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  outline: none;
+}
+.market-joker-card[data-rarity="uncommon"] { border-top-color: #3d7d5a; }
+.market-joker-card[data-rarity="rare"] { border-top-color: #7d9fd0; }
+.market-joker-card[data-rarity="epic"] { border-top-color: #a779d0; }
+.market-joker-card[data-rarity="legendary"] { border-top-color: var(--gold); }
+.market-joker-art {
+  display: block;
+  height: 48px;
+  border-radius: 3px;
+  background: radial-gradient(circle at 50% 35%, #282317, #100e0a 78%);
+  overflow: hidden;
+}
+.market-joker-art svg { display: block; width: 100%; height: 100%; }
+.market-joker-name {
+  display: block;
+  margin-top: 6px;
+  overflow: hidden;
+  font: 600 9.5px/1.2 var(--display);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 681px) {
+  .screen-floor .table-scroll { overflow: visible; }
+  .screen-floor .market-section { margin-top: 28px; }
+  .screen-floor .market-section .section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .screen-floor .market-section .section-heading::after {
+    content: "Live tape";
+    color: var(--faint);
+    font: 600 9px/1 var(--mono);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .screen-floor .market-table {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(226px, 1fr));
+    gap: 12px;
+    border-collapse: separate;
+  }
+  .screen-floor .market-table thead { display: none; }
+  .screen-floor .market-table tbody { display: contents; }
+  .screen-floor .market-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "company company"
+      "price change"
+      "owned pl"
+      "value value"
+      "trade trade";
+    align-content: start;
+    gap: 8px 10px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.035), rgba(0, 0, 0, 0.16));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+  .screen-floor .market-table tbody tr:hover {
+    transform: translateY(-2px);
+    border-color: var(--line-bright);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .screen-floor .market-table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .screen-floor .market-table td.company {
+    grid-area: company;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--line);
+  }
+  .screen-floor .market-table td.price { grid-area: price; }
+  .screen-floor .market-table td[data-label="Change"] { grid-area: change; text-align: right; }
+  .screen-floor .market-table td[data-label="Owned"] { grid-area: owned; }
+  .screen-floor .market-table td[data-label="Value"] { grid-area: value; text-align: right; }
+  .screen-floor .market-table td[data-label="P/L"] { grid-area: pl; text-align: right; }
+  .screen-floor .market-table td.trade {
+    grid-area: trade;
+    margin-top: 2px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  .screen-floor .market-table td.num::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    color: var(--faint);
+    font: 600 8px/1 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .screen-floor .market-table .company-name { font-size: 18px; }
+  .screen-floor .market-table .ticker { color: var(--brass); letter-spacing: 0.2em; }
+  .screen-floor .market-table td.price { font-size: 26px; line-height: 1; }
+  .screen-floor .market-table .change {
+    display: inline-block;
+    padding: 5px 7px;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+  .screen-floor .market-table td.num { font-size: 12px; }
+  .screen-floor .market-table td.trade input {
+    width: 44px;
+    min-height: 32px;
+    padding: 7px 5px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .screen-floor .market-table td.trade button {
+    min-height: 32px;
+    padding: 7px 9px;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+  }
+}
+
+@media (max-width: 640px) {
+  .market-joker-cards { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .market-joker-card { flex: 0 0 86px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-target-bar i,
+  .market-joker-card,
+  .screen-floor .market-table tbody tr { transition: none !important; }
+  .market-joker-card:hover,
+  .market-joker-card:focus-visible,
+  .screen-floor .market-table tbody tr:hover { transform: none !important; }
 }

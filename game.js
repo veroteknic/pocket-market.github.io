@@ -452,8 +452,8 @@ function render() {
       <td class="num price" data-label="Price">$${money(company.price)}</td>
       <td class="num" data-label="Change">${changeMarkup(priceChange(company.ticker, company.price))}</td>
       <td class="num" data-label="Owned">${company.shares}</td>
-      <td class="num col-detail">$${money(company.price * company.shares)}</td>
-      <td class="num col-detail">${profitMarkup(unrealizedProfit(company))}</td>
+      <td class="num col-detail" data-label="Value">$${money(company.price * company.shares)}</td>
+      <td class="num col-detail" data-label="P/L">${profitMarkup(unrealizedProfit(company))}</td>
       <td class="trade">
         <input id="amount-${index}" type="number" min="1" value="1" aria-label="Shares of ${company.name}">
         <button data-action="buy" data-index="${index}" ${pendingTrade ? "disabled" : ""}>Buy</button>
@@ -1033,6 +1033,42 @@ function jokerArtMarkup(joker, className = "joker-art") {
   return `<span class="${className}">${jokerArtwork(joker)}</span>`;
 }
 
+let marketJokerRailKey = "";
+
+function renderMarketJokerRail(live) {
+  const rail = $("market-joker-rail");
+  const cards = $("market-joker-cards");
+  if (!rail || !cards) return;
+  const owned = live ? (runState?.jokers || []) : [];
+  const key = `${owned.join("|")}:${jokerCatalog?.jokers?.length || 0}`;
+  if (key === marketJokerRailKey) return;
+  marketJokerRailKey = key;
+  rail.hidden = !owned.length;
+  if (!owned.length) {
+    cards.replaceChildren();
+    return;
+  }
+  const byId = {};
+  (jokerCatalog?.jokers || []).forEach(joker => { byId[joker.id] = joker; });
+  cards.replaceChildren();
+  owned.forEach(id => {
+    const joker = byId[id];
+    if (!joker) return;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "market-joker-card";
+    card.dataset.rarity = joker.rarity;
+    card.setAttribute("aria-label", `${joker.name} — open jokers`);
+    card.innerHTML = `
+      <span class="market-joker-art">${jokerArtwork(joker)}</span>
+      <span class="market-joker-name">${joker.name}</span>
+    `;
+    card.addEventListener("click", () => navigate("jokers"));
+    cards.append(card);
+  });
+  if ($("market-joker-count")) $("market-joker-count").textContent = String(cards.children.length);
+}
+
 function renderActiveJokerDetail(joker) {
   const detail = $("active-joker-detail");
   if (!detail || !joker) return;
@@ -1151,6 +1187,7 @@ function renderRunStrip() {
   strip.hidden = !live;
   const hud = $("floor-score-hud");
   if (hud) hud.hidden = !live;
+  renderMarketJokerRail(live);
   if (!live) return;
   $("run-ante").textContent = `${runState.ante} / ${runRules.antes}`;
   $("run-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;
@@ -1162,6 +1199,14 @@ function renderRunStrip() {
   if ($("floor-preview-chips")) $("floor-preview-chips").textContent = preview ? preview.chips.toLocaleString() : "—";
   if ($("floor-preview-mult")) $("floor-preview-mult").textContent = preview ? `×${preview.mult}` : "—";
   if ($("floor-preview-score")) $("floor-preview-score").textContent = preview ? preview.score.toLocaleString() : "—";
+  if ($("floor-preview-target")) $("floor-preview-target").textContent = Number(runState.target).toLocaleString();
+  const targetBar = $("floor-preview-bar");
+  if (targetBar) {
+    const ratio = preview && runState.target > 0 ? preview.score / runState.target : 0;
+    targetBar.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
+  }
+  const targetPlaque = $("floor-target-plaque");
+  if (targetPlaque) targetPlaque.classList.toggle("is-pass", Boolean(preview && preview.score >= runState.target));
   strip.classList.toggle("pass", Boolean(preview && preview.score >= runState.target));
   $("run-lock").disabled = runBusy;
 

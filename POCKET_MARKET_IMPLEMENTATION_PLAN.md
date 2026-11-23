@@ -1,6 +1,6 @@
 # Pocket Market — Roguelike Transformation Plan
 
-Status: **Phases 0–8 implemented; Phase 8 game-feel polish in progress. Phase 9/10 outstanding.**
+Status: **Phases 0–8 implemented; Phase 8 arcade playfield polish complete. Phase 9/10 outstanding.**
 Last updated: 2026-11-23
 Source specification: `AGENTS.md`, section “MY SECTION”.
 
@@ -898,7 +898,7 @@ implementation can start immediately if approved.
 | 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions (diversification-demand, concentration-penalty, multiplier-ceiling, sector-blind, volatility-wall, breadth-requirement, quiet-tape, iron-cap). Purchase-triggered market events: 25% chance on each joker buy triggers bull surge (+0.3 mult) or flatline (halves rising bonus) shared with all players via WebSocket broadcast. Boss info shown on run strip and score screen. 45 Worker tests pass. |
 | 6 — Shop and consumables | **Complete** | Shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1. `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll` endpoints. Shop screen on the frontend with buy/reroll controls. |
 | 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions. Purchase-triggered market events: 25% chance on each joker buy triggers bull surge or flatline shared with all players. Boss info shown on run strip and score screen. 45 Worker tests pass. |
-| 8 — Polish | **In progress** | Screen transitions, score reveal, reduced-motion support, distinct Boss Round screen, run-strip segmentation, shop hydration. Added (2026-11-23): dramatic three-act scoring ceremony (chips → mult → total), large chips×mult breakdown, joker activation pulses with sound, screenshake scaled to result, cancellable number animations, Skip button, and shop game feel (staggered card dealing, SOLD stamp, credit count-down, reroll animation, toasts, distinct purchase/reroll/rarity cues). Collection has selectable cards, a sticky inspector with trigger/effect/value/owned status, owned markers and responsive stacking. The run floor is now split into dedicated Market, Portfolio and Jokers screens with tab navigation; joker cards across shop, collection, scoring and the Jokers screen use original geometric SVG artwork and rarity finishes. |
+| 8 — Polish | **In progress** | Screen transitions, score reveal, reduced-motion support, distinct Boss Round screen, run-strip segmentation, shop hydration. Added (2026-11-23): dramatic three-act scoring ceremony (chips → mult → total), large chips×mult breakdown, joker activation pulses with sound, screenshake scaled to result, cancellable number animations, Skip button, and shop game feel (staggered card dealing, SOLD stamp, credit count-down, reroll animation, toasts, distinct purchase/reroll/rarity cues). Collection has selectable cards, a sticky inspector with trigger/effect/value/owned status, owned markers and responsive stacking. The run floor is now split into dedicated Market, Portfolio and Jokers screens with tab navigation; joker cards across shop, collection, scoring and the Jokers screen use original geometric SVG artwork and rarity finishes. Added (2026-11-23, arcade playfield pass): Market rows render as physical company cards from tablet width up, a compact active-joker rail links into the Jokers screen, and the chips × mult HUD now includes a server-authoritative target plaque with progress fill. |
 | 9 — Multiplayer hardening | Not started | Continuous, formalized here. |
 | 10 — Release QA | **Partial** | Mocked browser QC sweep (62 checks) plus production Pages/asset checks; production UI verification pending. |
 
@@ -910,9 +910,9 @@ implementation can start immediately if approved.
 - Server: versioned `RunSaveV1`, migration, start/lock/advance/retire, developer reset, archived classic portfolios, run-aware leaderboard values, `/api/jokers`, `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll`.
 - Scoring: base chips from round portfolio return, holding/rising bonuses, diversification multiplier, joker effects, boss-round restrictions, purchase-triggered market events.
 - Shop: shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1.
-- Polish: screen transitions, score reveal, reduced-motion support, distinct Boss Round screen, run-strip segmentation, shop state hydration. Dramatic scoring ceremony with chips×mult breakdown, staged joker activations, scaled screenshake, sound cues, cancellable number animation and Skip. Shop game feel: staggered deal-in, SOLD stamp, credit count-down, reroll out/in animation, confirmation/reject toasts, distinct purchase/reroll/rarity cues. Collection: selectable joker cards with a detail inspector (trigger, effect type, value, owned status), owned markers and owned/total progress. Run views: Market, Portfolio and Jokers are separate full-screen states with tab navigation; the Market and Portfolio screens carry an arcade chips × mult preview HUD; joker cards in shop, collection, scoring and the Jokers screen use original geometric SVG artwork with rarity colour finishes.
+- Polish: screen transitions, score reveal, reduced-motion support, distinct Boss Round screen, run-strip segmentation, shop state hydration. Dramatic scoring ceremony with chips×mult breakdown, staged joker activations, scaled screenshake, sound cues, cancellable number animation and Skip. Shop game feel: staggered deal-in, SOLD stamp, credit count-down, reroll out/in animation, confirmation/reject toasts, distinct purchase/reroll/rarity cues. Collection: selectable joker cards with a detail inspector (trigger, effect type, value, owned status), owned markers and owned/total progress. Run views: Market, Portfolio and Jokers are separate full-screen states with tab navigation; the Market and Portfolio screens carry an arcade chips × mult preview HUD; joker cards in shop, collection, scoring and the Jokers screen use original geometric SVG artwork with rarity colour finishes. The arcade playfield pass turns Market listings into selectable company cards from 681px upward, adds a compact active-joker rail on the Market screen, and gives the preview HUD a target plaque with progress toward the server-supplied round target.
 - Auth: the login/register gate reappears after a 401 but cannot stay stuck after a network failure.
-- Verification: `node --check game.js`, 45 Worker rule tests, Worker typecheck/build, mocked browser QC across 1440/1024/768/390 px. Current local frontend QC: 37/37 segmented-flow checks, 11/11 animated-scoring/Skip checks, 29/29 run-view/joker-artwork checks, 22/22 shop-feel checks, 17/17 collection checks, 8/8 production checks — all passing.
+- Verification: `node --check game.js`, 45 Worker rule tests, Worker typecheck/build, mocked browser QC across 1440/1024/768/390 px. Current local frontend QC: 42/42 consolidated mock-browser checks (flow, scoring, target plaque, joker rail, run views, collection, responsive overflow and console errors) plus 4/4 responsive layout audits for HUD/rail/card collisions, off-screen elements and touch target heights. Earlier suite results (37/37 flow, 11/11 animation, 29/29 views, 22/22 shop feel, 17/17 collection, 8/8 production) remain recorded for their builds; production verification for this arcade-playfield build is pending deployment.
 
 **Known gaps**
 
@@ -954,7 +954,8 @@ The project is done only when:
 
 ## 14. Immediate next step
 
-Production build `f574fb5` is verified (8/8 checks). Next, add a server-authoritative
-post-round reward choice (Worker changes need build/deploy authorization), or stay frontend-only
-and surface which Jokers fired in the last scoring result on the Market screen. Keep the classic
-board reachable throughout.
+The arcade-playfield frontend build is ready to commit and push; after the Pages build completes,
+run the production DOM/cache-bust/console check against `?v=2026-11-23-arcade-playfield`. Next, add a
+server-authoritative post-round reward choice (Worker changes need build/deploy authorization), or
+stay frontend-only and surface which Jokers fired in the last scoring result on the Market screen.
+Keep the classic board reachable throughout.

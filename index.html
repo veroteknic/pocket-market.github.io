@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-23-split-views">
+  <link rel="stylesheet" href="style.css?v=2026-11-23-arcade-playfield">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -97,6 +97,16 @@
         <span class="hud-times">×</span>
         <div class="hud-mult"><span>Mult</span><strong id="floor-preview-mult">—</strong></div>
         <div class="hud-score"><span>Preview</span><strong id="floor-preview-score">—</strong></div>
+        <div class="hud-target" id="floor-target-plaque">
+          <span>Target</span>
+          <strong id="floor-preview-target">—</strong>
+          <span class="hud-target-bar"><i id="floor-preview-bar"></i></span>
+        </div>
+      </div>
+
+      <div id="market-joker-rail" class="market-joker-rail" hidden>
+        <div class="market-joker-head"><span>Active Jokers</span><small id="market-joker-count">0</small></div>
+        <div id="market-joker-cards" class="market-joker-cards"></div>
       </div>
 
     <div class="tick-strip" aria-hidden="true">
@@ -674,6 +684,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-23-split-views"></script>
+  <script src="game.js?v=2026-11-23-arcade-playfield"></script>
 </body>
 </html>
