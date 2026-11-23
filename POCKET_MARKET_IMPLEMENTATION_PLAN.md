@@ -1,7 +1,7 @@
 # Pocket Market — Roguelike Transformation Plan
 
-Status: **Phase 1A/1B complete; end-to-end slice in progress (1C, basic Phase 3/4).**
-Last updated: 2026-11-16
+Status: **Phases 0–8 implemented; Phase 8 game-feel polish in progress. Phase 9/10 outstanding.**
+Last updated: 2026-11-23
 Source specification: `AGENTS.md`, section “MY SECTION”.
 
 This document is the working plan required by the specification. It records what exists
@@ -898,9 +898,9 @@ implementation can start immediately if approved.
 | 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions (diversification-demand, concentration-penalty, multiplier-ceiling, sector-blind, volatility-wall, breadth-requirement, quiet-tape, iron-cap). Purchase-triggered market events: 25% chance on each joker buy triggers bull surge (+0.3 mult) or flatline (halves rising bonus) shared with all players via WebSocket broadcast. Boss info shown on run strip and score screen. 45 Worker tests pass. |
 | 6 — Shop and consumables | **Complete** | Shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1. `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll` endpoints. Shop screen on the frontend with buy/reroll controls. |
 | 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions. Purchase-triggered market events: 25% chance on each joker buy triggers bull surge or flatline shared with all players. Boss info shown on run strip and score screen. 45 Worker tests pass. |
-| 8 — Polish | **Complete** | Screen transitions, score reveal, reduced-motion support, joker visibility on run strip, distinct Boss Round screen, run-strip cell segmentation, shop state hydration on run start. |
+| 8 — Polish | **In progress** | Screen transitions, score reveal, reduced-motion support, joker visibility on run strip/floor, distinct Boss Round screen, run-strip segmentation, shop hydration. Added (2026-11-23): dramatic three-act scoring ceremony (chips → mult → total), large chips×mult breakdown, joker activation pulses with sound, screenshake scaled to result, cancellable number animations, Skip button, and an always-visible Joker tray on the trading floor. |
 | 9 — Multiplayer hardening | Not started | Continuous, formalized here. |
-| 10 — Release QA | Not started | Final. |
+| 10 — Release QA | **Partial** | Mocked browser QC sweep (62 checks) plus production Pages/asset checks; production UI verification pending. |
 
 ### Current milestone record
 
@@ -910,19 +910,21 @@ implementation can start immediately if approved.
 - Server: versioned `RunSaveV1`, migration, start/lock/advance/retire, developer reset, archived classic portfolios, run-aware leaderboard values, `/api/jokers`, `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll`.
 - Scoring: base chips from round portfolio return, holding/rising bonuses, diversification multiplier, joker effects, boss-round restrictions, purchase-triggered market events.
 - Shop: shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1.
-- Polish: screen transitions, score reveal, reduced-motion support, joker visibility on run strip, distinct Boss Round screen, run-strip cell segmentation, shop state hydration on run start.
-- Verification: `node --check game.js`, 45 Worker rule tests (jokers + shop + boss/events), Worker typecheck/build, 88 mocked browser checks across 1440/1024/768/390 px.
+- Polish: screen transitions, score reveal, reduced-motion support, joker visibility on run strip/floor, distinct Boss Round screen, run-strip segmentation, shop state hydration. Dramatic scoring ceremony with chips×mult breakdown, staged joker activations, scaled screenshake, sound cues, cancellable number animation and Skip. Joker tray on the trading floor with selectable cards and full effect text.
+- Verification: `node --check game.js`, 45 Worker rule tests, Worker typecheck/build, mocked browser QC across 1440/1024/768/390 px. Current frontend QC: 37/37 segmented-flow checks, 11/11 animated-scoring/Skip checks, 14/14 Joker-tray checks — all passing.
 
 **Known gaps**
 
 - Joker slot limits / acquisition caps (shop writes to run save but no slot cap yet).
 - Round ends only on manual lock; there is no tick-boundary model.
-- Run saves store the active account, but a full reconnect/duplicate-action audit is Phase 9.
+- A full reconnect/duplicate-action audit is Phase 9.
 - Results screen omits leaderboard placement and run duration.
+- Shop lacks card-level purchase animation and reward-choice flow after rounds.
+- Only a fraction of the 20 jokers are exercised by the mock QC catalog.
 
 **Recommended next milestone**
 
-- Phase 9: Multiplayer hardening (reconnect/duplicate-action audit, joker slot caps, save recovery), then Phase 10 Release QA.
+- Finish Phase 8 game feel: shop purchase/reroll animation, post-round reward choice, richer sound set, then Phase 9 multiplayer hardening and Phase 10 release QA.
 
 ---
 
@@ -950,6 +952,6 @@ The project is done only when:
 
 ## 14. Immediate next step
 
-Validate the deployed end-to-end slice, then start **Phase 5A: joker catalog and
-collection screen** before acquisition or shop mechanics. Keep the classic board reachable
-throughout.
+Verify the deployed `f700e52` build in a real browser, then continue **Phase 8 game feel**:
+shop purchase/reroll animation, a post-round reward choice, and broader card/sound polish.
+Keep the classic board reachable throughout.
