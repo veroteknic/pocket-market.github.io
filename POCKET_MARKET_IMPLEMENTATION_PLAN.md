@@ -898,7 +898,7 @@ implementation can start immediately if approved.
 | 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions (diversification-demand, concentration-penalty, multiplier-ceiling, sector-blind, volatility-wall, breadth-requirement, quiet-tape, iron-cap). Purchase-triggered market events: 25% chance on each joker buy triggers bull surge (+0.3 mult) or flatline (halves rising bonus) shared with all players via WebSocket broadcast. Boss info shown on run strip and score screen. 45 Worker tests pass. |
 | 6 — Shop and consumables | **Complete** | Shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1. `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll` endpoints. Shop screen on the frontend with buy/reroll controls. |
 | 7 — Boss rounds and market events | **Complete** | 8 boss rounds on round 3 of each ante with scoring restrictions. Purchase-triggered market events: 25% chance on each joker buy triggers bull surge or flatline shared with all players. Boss info shown on run strip and score screen. 45 Worker tests pass. |
-| 8 — Polish | **In progress** | Screen transitions, score reveal, reduced-motion support, joker visibility on run strip/floor, distinct Boss Round screen, run-strip segmentation, shop hydration. Added (2026-11-23): dramatic three-act scoring ceremony (chips → mult → total), large chips×mult breakdown, joker activation pulses with sound, screenshake scaled to result, cancellable number animations, Skip button, and an always-visible Joker tray on the trading floor. |
+| 8 — Polish | **In progress** | Screen transitions, score reveal, reduced-motion support, joker visibility on run strip/floor, distinct Boss Round screen, run-strip segmentation, shop hydration. Added (2026-11-23): dramatic three-act scoring ceremony (chips → mult → total), large chips×mult breakdown, joker activation pulses with sound, screenshake scaled to result, cancellable number animations, Skip button, always-visible Joker tray, and shop game feel (staggered card dealing, SOLD stamp, credit count-down, reroll animation, toasts, distinct purchase/reroll/rarity cues). |
 | 9 — Multiplayer hardening | Not started | Continuous, formalized here. |
 | 10 — Release QA | **Partial** | Mocked browser QC sweep (62 checks) plus production Pages/asset checks; production UI verification pending. |
 
@@ -910,8 +910,9 @@ implementation can start immediately if approved.
 - Server: versioned `RunSaveV1`, migration, start/lock/advance/retire, developer reset, archived classic portfolios, run-aware leaderboard values, `/api/jokers`, `/api/shop`, `/api/shop/purchase`, `/api/shop/reroll`.
 - Scoring: base chips from round portfolio return, holding/rising bonuses, diversification multiplier, joker effects, boss-round restrictions, purchase-triggered market events.
 - Shop: shop currency, joker ownership, purchase and reroll mechanics wired into RunSaveV1.
-- Polish: screen transitions, score reveal, reduced-motion support, joker visibility on run strip/floor, distinct Boss Round screen, run-strip segmentation, shop state hydration. Dramatic scoring ceremony with chips×mult breakdown, staged joker activations, scaled screenshake, sound cues, cancellable number animation and Skip. Joker tray on the trading floor with selectable cards and full effect text.
-- Verification: `node --check game.js`, 45 Worker rule tests, Worker typecheck/build, mocked browser QC across 1440/1024/768/390 px. Current frontend QC: 37/37 segmented-flow checks, 11/11 animated-scoring/Skip checks, 14/14 Joker-tray checks — all passing.
+- Polish: screen transitions, score reveal, reduced-motion support, joker visibility on run strip/floor, distinct Boss Round screen, run-strip segmentation, shop state hydration. Dramatic scoring ceremony with chips×mult breakdown, staged joker activations, scaled screenshake, sound cues, cancellable number animation and Skip. Joker tray on the trading floor with selectable cards and full effect text. Shop game feel: staggered deal-in, SOLD stamp, credit count-down, reroll out/in animation, confirmation/reject toasts, distinct purchase/reroll/rarity cues.
+- Auth: the login/register gate reappears after a 401 but cannot stay stuck after a network failure.
+- Verification: `node --check game.js`, 45 Worker rule tests, Worker typecheck/build, mocked browser QC across 1440/1024/768/390 px. Current frontend QC: 37/37 segmented-flow checks, 11/11 animated-scoring/Skip checks, 14/14 Joker-tray checks, 22/22 shop-feel checks, 8/8 production checks — all passing.
 
 **Known gaps**
 
@@ -919,12 +920,12 @@ implementation can start immediately if approved.
 - Round ends only on manual lock; there is no tick-boundary model.
 - A full reconnect/duplicate-action audit is Phase 9.
 - Results screen omits leaderboard placement and run duration.
-- Shop lacks card-level purchase animation and reward-choice flow after rounds.
+- Shop still lacks a post-round reward-choice flow.
 - Only a fraction of the 20 jokers are exercised by the mock QC catalog.
 
 **Recommended next milestone**
 
-- Finish Phase 8 game feel: shop purchase/reroll animation, post-round reward choice, richer sound set, then Phase 9 multiplayer hardening and Phase 10 release QA.
+- Continue Phase 8 game feel with visually showing which Jokers contribute to the live score preview, then add a server-authoritative post-round reward choice. After that, Phase 9 multiplayer hardening and Phase 10 release QA.
 
 ---
 
@@ -952,6 +953,6 @@ The project is done only when:
 
 ## 14. Immediate next step
 
-Verify the deployed `f700e52` build in a real browser, then continue **Phase 8 game feel**:
-shop purchase/reroll animation, a post-round reward choice, and broader card/sound polish.
-Keep the classic board reachable throughout.
+Production build `6169c9b` is verified (8/8 checks). Next, continue **Phase 8 game feel**:
+show which Jokers are contributing to the live score preview, then add a server-authoritative
+post-round reward choice. Keep the classic board reachable throughout.
