@@ -2119,13 +2119,34 @@ try {
   setScreen("menu");
 } catch (error) {
   console.error("Initialization error:", error);
-  // Ensure at least the menu screen is visible
-  setScreen("menu");
+  // Bulletproof: force menu visible no matter what
+  try {
+    document.querySelectorAll(".screen").forEach(s => s.hidden = true);
+    document.getElementById("screen-menu").hidden = false;
+    document.body.dataset.screen = "menu";
+    activeScreen = "menu";
+  } catch {
+    // If even this fails, nothing we can do
+  }
 }
 connectToMarket();
 loadPlayer();
 loadDailySummary();
 setInterval(renderLeaderboard, 30000);
+
+// Global error handler: if anything throws, force menu visible
+window.addEventListener("error", event => {
+  console.error("Uncaught error:", event.error);
+  try {
+    document.querySelectorAll(".screen").forEach(s => s.hidden = true);
+    document.getElementById("screen-menu").hidden = false;
+    document.body.dataset.screen = "menu";
+    activeScreen = "menu";
+  } catch {
+    // Last resort
+  }
+});
+
 if (savedPlayerName) $("name-input").value = savedPlayerName;
 
 async function claimName(name, password) {
