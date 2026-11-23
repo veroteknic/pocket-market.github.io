@@ -1577,6 +1577,7 @@ body.dev-open { padding-right: 410px; }
 }
 
 .shop-head {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1630,6 +1631,51 @@ body.dev-open { padding-right: 410px; }
   font-variant-numeric: tabular-nums;
 }
 
+.shop-currency.is-spending strong { animation: spendFlash 460ms ease; }
+.shop-reroll.is-spinning { animation: rerollPulse 340ms ease; }
+
+.shop-toast {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  padding: 6px 10px;
+  border: 1px solid var(--brass);
+  border-radius: 3px;
+  background: #1b160d;
+  color: var(--gold);
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+.shop-toast.is-visible { opacity: 1; transform: translateY(0); }
+.shop-toast[data-kind="reject"] { border-color: #a04437; color: #e07a6a; }
+
+@keyframes spendFlash {
+  0%, 100% { color: var(--ink); }
+  30% { color: var(--gold); }
+}
+@keyframes rerollPulse {
+  50% { border-color: var(--brass); color: var(--gold); transform: scale(1.04); }
+}
+@keyframes shopDeal {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes shopSold {
+  0% { opacity: 1; transform: none; }
+  35% { opacity: 1; transform: scale(1.04) rotate(-1deg); }
+  100% { opacity: 0; transform: translateY(-18px) scale(0.9); }
+}
+@keyframes shopOut {
+  to { opacity: 0; transform: translateY(-8px) scale(0.97); }
+}
+
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1647,8 +1693,31 @@ body.dev-open { padding-right: 410px; }
 }
 
 .shop-card {
-  /* Base box model, hover lift and activation live on .card; this selector is
-     kept so the rarity text-color rules below still apply. */
+  /* Base box model, hover lift and activation live on .card; this selector
+     adds the dealt-in entrance and purchase/reroll feedback animations. */
+  animation: shopDeal 320ms ease backwards;
+  animation-delay: calc(var(--deal-index, 0) * 45ms);
+}
+.shop-grid.is-rerolling .shop-card {
+  animation: shopOut 200ms ease both;
+  pointer-events: none;
+}
+.shop-card.is-purchasing { pointer-events: none; opacity: 0.7; }
+.shop-card.is-sold {
+  animation: shopSold 380ms ease forwards;
+  pointer-events: none;
+}
+.shop-card.is-sold::after {
+  content: "SOLD";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(12, 9, 5, 0.78);
+  color: var(--gold);
+  font: 700 24px/1 var(--display);
+  letter-spacing: 0.16em;
+  transform: rotate(-8deg);
 }
 
 .shop-card::before {
@@ -1835,7 +1904,10 @@ body.dev-open { padding-right: 410px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shop-card { animation: none !important; }
+  .shop-card,
+  .shop-currency.is-spending strong,
+  .shop-reroll.is-spinning { animation: none !important; }
+  .shop-toast { transition: none; }
 }
 
 /* ---------- Run Setup ---------- */

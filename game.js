@@ -211,6 +211,12 @@ function cue(name) {
   if (name === "buy") {
     tone(440, { end: 660, duration: 0.13, gain: 0.13 });
     tone(880, { duration: 0.11, gain: 0.1, delay: 0.08 });
+  } else if (name === "reroll") {
+    tone(220, { end: 330, duration: 0.07, type: "square", gain: 0.06 });
+    tone(330, { end: 220, duration: 0.07, type: "square", gain: 0.06, delay: 0.06 });
+    tone(494, { duration: 0.12, gain: 0.09, delay: 0.12 });
+  } else if (name === "epic") {
+    [659, 880, 1108, 1319].forEach((frequency, index) => tone(frequency, { duration: 0.17, gain: 0.09, delay: index * 0.06 }));
   } else if (name === "sell") {
     tone(560, { end: 300, duration: 0.16, gain: 0.12 });
   } else if (name === "boom") {
@@ -1745,6 +1751,33 @@ function renderCollectionScreen() {
   return true;
 }
 
+let shopToastTimer = 0;
+
+function shopWait(ms) {
+  return reducedMotion.matches ? Promise.resolve() : new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function showShopToast(text, kind = "buy") {
+  const toast = $("shop-toast");
+  if (!toast) return;
+  clearTimeout(shopToastTimer);
+  toast.textContent = text;
+  toast.dataset.kind = kind;
+  toast.classList.remove("is-visible");
+  void toast.offsetWidth;
+  toast.classList.add("is-visible");
+  shopToastTimer = setTimeout(() => toast.classList.remove("is-visible"), 1800);
+}
+
+function animateShopCurrency(from, to) {
+  const element = $("shop-currency");
+  const pill = element?.closest(".shop-currency");
+  if (!element || !pill) return;
+  pill.classList.add("is-spending");
+  animateNumber(element, from, to, value => Math.round(value).toLocaleString(), 440);
+  setTimeout(() => pill.classList.remove("is-spending"), 520);
+}
+
 function renderShopScreen() {
   const grid = $("shop-grid");
   const currency = $("shop-currency");
@@ -1761,6 +1794,7 @@ function renderShopScreen() {
     return true;
   }
   empty.hidden = true;
+  let dealIndex = 0;
   currency.textContent = shopState.currency.toLocaleString();
   rerollCost.textContent = "15";
   rerollBtn.disabled = shopState.currency < 15;
@@ -1791,6 +1825,7 @@ function renderShopScreen() {
       const card = document.createElement("article");
       card.className = "shop-card card";
       card.dataset.rarity = rarity;
+      card.style.setProperty("--deal-index", String(dealIndex++));
       const owned = shopState.owned.includes(joker.id);
       const affordable = shopState.currency >= offer.price;
       card.innerHTML = `
@@ -2056,9 +2091,16 @@ async function retireCurrentRun() {
   }
 }
 
-async function purchaseJoker(jokerId) {
+async function purchaseJoker(jokerId, card = null) {
   if (runBusy) return;
+  const previousCurrency = shopState?.currency ?? 0;
+  const joker = jokerCatalog?.jokers?.find(item => item.id === jokerId);
+  const rare = joker?.rarity === "epic" || joker?.rarity === "legendary";
+  const button = card?.querySelector("button.shop-buy");
   runBusy = true;
+  card?.classList.add("is-purchasing");
+  if (button) button.disabled = true;
+  cue(rare ? "epic" : "buy");
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/shop/purchase`, {
       method: "POST",
@@ -2076,9 +2118,18 @@ async function purchaseJoker(jokerId) {
       setMessage(`${data.marketEvent.headline} ${data.marketEvent.detail}`);
       cue("fail");
     }
+    card?.classList.remove("is-purchasing");
+    card?.classList.add("is-sold");
+    await shopWait(380);
     renderShopScreen();
     renderMenu();
+    animateShopCurrency(previousCurrency, shopState?.currency ?? previousCurrency);
+    showShopToast(`Bought · ${joker?.name || jokerId}`);
   } catch (error) {
+    card?.classList.remove("is-purchasing", "is-sold");
+    if (button) button.disabled = false;
+    cue("reject");
+    showShopToast("Purchase failed", "reject");
     setMessage(error instanceof Error ? error.message : "Purchase failed.");
   } finally {
     runBusy = false;
@@ -2087,7 +2138,13 @@ async function purchaseJoker(jokerId) {
 
 async function rerollShop() {
   if (runBusy) return;
+  const previousCurrency = shopState?.currency ?? 0;
+  const grid = $("shop-grid");
+  const rerollButton = $("shop-reroll");
   runBusy = true;
+  cue("reroll");
+  grid?.classList.add("is-rerolling");
+  rerollButton?.classList.add("is-spinning");
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/shop/reroll`, {
       method: "POST",
@@ -2098,9 +2155,18 @@ async function rerollShop() {
     runRulesFrom(data);
     shopState = data.shop || null;
     runState = data.run || null;
+    await shopWait(200);
+    grid?.classList.remove("is-rerolling");
+    rerollButton?.classList.remove("is-spinning");
     renderShopScreen();
     renderMenu();
+    animateShopCurrency(previousCurrency, shopState?.currency ?? previousCurrency);
+    showShopToast("Shop rerolled");
   } catch (error) {
+    grid?.classList.remove("is-rerolling");
+    rerollButton?.classList.remove("is-spinning");
+    cue("reject");
+    showShopToast("Reroll failed", "reject");
     setMessage(error instanceof Error ? error.message : "Reroll failed.");
   } finally {
     runBusy = false;
@@ -2171,7 +2237,7 @@ $("stats-new-run").addEventListener("click", startRun);
 $("shop-reroll").addEventListener("click", rerollShop);
 $("shop-grid").addEventListener("click", event => {
   const button = event.target.closest("button.shop-buy");
-  if (button) purchaseJoker(button.dataset.jokerId);
+  if (button) purchaseJoker(button.dataset.jokerId, button.closest(".shop-card"));
 });
 window.addEventListener("hashchange", () => {
   const name = location.hash.replace(/^#/, "");
