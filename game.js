@@ -31,6 +31,8 @@ let transitioning = false;
 let runBusy = false;
 let scoreAnimationToken = 0;
 let scoreRenderKey = "";
+let numberAnimGeneration = 0;
+const numberAnimTokens = new WeakMap();
 let jokerCatalog = null;
 let shopState = null;
 let pendingMarketEvent = null;
@@ -227,6 +229,10 @@ function cue(name) {
     [523, 659, 784, 1046].forEach((frequency, index) => tone(frequency, { duration: 0.18, gain: 0.08, delay: index * 0.07 }));
   } else if (name === "joker") {
     [659, 988, 1319].forEach((frequency, index) => tone(frequency, { duration: 0.15, gain: 0.1, delay: index * 0.06 }));
+  } else if (name === "chips") {
+    tone(280, { end: 520, duration: 0.13, type: "triangle", gain: 0.09 });
+  } else if (name === "mult") {
+    [523, 784, 1046].forEach((frequency, index) => tone(frequency, { duration: 0.16, gain: 0.1, delay: index * 0.05 }));
   } else if (name === "fail") {
     [330, 262, 196].forEach((frequency, index) => tone(frequency, { duration: 0.2, type: "sawtooth", gain: 0.07, delay: index * 0.09 }));
   }
@@ -1090,13 +1096,23 @@ function formatEffectAmount(kind, value) {
   return `+${value.toFixed(2)}×`;
 }
 
+function cancelNumberAnimations() {
+  numberAnimGeneration += 1;
+}
+
 function animateNumber(element, from, to, format, duration = 420) {
+  if (!element) return;
+  const generation = numberAnimGeneration;
+  const token = (numberAnimTokens.get(element) || 0) + 1;
+  numberAnimTokens.set(element, token);
+  const current = () => numberAnimGeneration === generation && numberAnimTokens.get(element) === token;
   if (reducedMotion.matches) {
     element.textContent = format(to);
     return;
   }
   const startedAt = performance.now();
   const update = now => {
+    if (!current()) return;
     const progress = Math.min(1, (now - startedAt) / duration);
     const eased = 1 - Math.pow(1 - progress, 3);
     element.textContent = format(from + (to - from) * eased);
@@ -1126,56 +1142,107 @@ function setScoreMeter(result) {
 }
 
 function revealScoreImmediately(result) {
+  cancelNumberAnimations();
   [...$("score-effects").children].forEach(row => {
     row.classList.add("revealed");
     const amount = Number(row.dataset.value);
     row.querySelector(".value").textContent = formatEffectAmount(row.dataset.kind, amount);
   });
-  $("score-final").textContent = result.score.toLocaleString();
+  [...$("score-joker-grid").children].forEach(card => card.classList.add("is-activated"));
+  $("score-chips").textContent = Number(result.chips).toLocaleString();
+  $("score-mult").textContent = `×${Number(result.mult).toFixed(2)}`;
+  $("score-final").textContent = Number(result.score).toLocaleString();
   setScoreMeter(result);
   setScoreVerdict(result, { silent: true });
 }
 
 function playScoreSequence(result) {
   scoreAnimationToken += 1;
+  cancelNumberAnimations();
   const token = scoreAnimationToken;
   const rows = [...$("score-effects").children];
   rows.forEach(row => row.classList.remove("revealed"));
   clearScoreJokers();
   $("score-final").textContent = "0";
+  $("score-chips").textContent = "0";
+  $("score-mult").textContent = "×1";
   $("score-meter-fill").style.width = "0%";
   setScoreVerdict(result, { clear: true });
 
-  const step = index => {
-    if (token !== scoreAnimationToken) return;
-    if (index >= rows.length) {
-      animateNumber($("score-final"), 0, result.score, value => Math.round(value).toLocaleString(), 540);
-      setTimeout(() => {
-        if (token !== scoreAnimationToken) return;
-        setScoreMeter(result);
-        setScoreVerdict(result);
-      }, reducedMotion.matches ? 0 : 540);
-      return;
-    }
-    const row = rows[index];
+  // Reduced motion (or nothing to reveal) goes straight to the final numbers.
+  if (reducedMotion.matches || !rows.length) {
+    revealScoreImmediately(result);
+    return;
+  }
+
+  const chipEffects = rows.filter(r => r.dataset.kind === "chips" || r.dataset.kind === "chips-add");
+  const multEffects = rows.filter(r => r.dataset.kind === "mult" || r.dataset.kind === "mult-add");
+  const otherEffects = rows.filter(r => !chipEffects.includes(r) && !multEffects.includes(r));
+
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const active = () => token === scoreAnimationToken;
+
+  const revealRow = row => {
     row.classList.add("revealed");
-    const amount = Number(row.dataset.value);
-    animateNumber(row.querySelector(".value"), 0, amount, value => formatEffectAmount(row.dataset.kind, value), 260);
-    // Activate the matching Joker card when its effect is revealed, so the
-    // player can see which card fired and in what order.
+    animateNumber(row.querySelector(".value"), 0, Number(row.dataset.value), v => formatEffectAmount(row.dataset.kind, v), 220);
     const jokerId = row.dataset.jokerId;
-    if (jokerId) {
-      const card = $(`score-joker-${jokerId}`);
-      if (card) {
-        card.classList.add("is-activated");
-        setTimeout(() => card.classList.remove("is-activated"), 400);
-        cue("joker");
-      }
+    const card = jokerId ? $(`score-joker-${jokerId}`) : null;
+    if (card) {
+      card.classList.add("is-activated");
+      setTimeout(() => card.classList.remove("is-activated"), 440);
+      cue("joker");
+    } else {
+      cue("tick");
     }
-    cue("tick");
-    setTimeout(() => step(index + 1), reducedMotion.matches ? 0 : 280);
   };
-  step(0);
+
+  (async () => {
+    // Act 1 — chips pile up. The server's total drives the counter, so what the
+    // player reads can never drift from the authoritative calculation.
+    cue("chips");
+    animateNumber($("score-chips"), 0, result.chips, v => Math.round(v).toLocaleString(), 700);
+    for (const row of [...chipEffects, ...otherEffects]) {
+      await wait(140);
+      if (!active()) return;
+      revealRow(row);
+    }
+
+    // Act 2 — multiplier slams in once the chips are on the table.
+    await wait(360);
+    if (!active()) return;
+    animateNumber($("score-mult"), 1, result.mult, v => `×${v.toFixed(2)}`, 520);
+    cue("mult");
+    for (const row of multEffects) {
+      await wait(150);
+      if (!active()) return;
+      revealRow(row);
+    }
+
+    // Act 3 — the total lands. A result that clears by a mile hits harder.
+    await wait(multEffects.length ? 460 : 360);
+    if (!active()) return;
+    const shake = result.score >= result.target * 2 ? "shake-lg"
+      : result.score >= result.target ? "shake-md" : "shake-sm";
+    const main = document.querySelector("main");
+    if (main) {
+      main.classList.add(shake);
+      setTimeout(() => main.classList.remove(shake), 320);
+    }
+    animateNumber($("score-final"), 0, result.score, v => Math.round(v).toLocaleString(), 760);
+
+    await wait(780);
+    if (!active()) return;
+    setScoreMeter(result);
+    setScoreVerdict(result, { silent: true });
+    cue(result.pass ? "score" : "fail");
+  })();
+}
+
+function skipScoreSequence() {
+  const result = currentRoundResult();
+  if (!result) return;
+  scoreAnimationToken += 1;
+  revealScoreImmediately(result);
 }
 
 function renderScoreScreen() {
@@ -1271,10 +1338,8 @@ function renderScoreJokers(jokerIds) {
 
 function clearScoreJokers() {
   const grid = $("score-joker-grid");
-  const shell = $("score-jokers");
   if (!grid) return;
   [...grid.children].forEach(card => card.classList.remove("is-activated"));
-  if (shell) shell.hidden = true;
 }
 
 // ---------- New screen renderers ----------
@@ -2013,6 +2078,7 @@ $("menu-collection").addEventListener("click", () => navigate("collection"));
 $("menu-shop").addEventListener("click", () => navigate("shop"));
 $("menu-stats").addEventListener("click", () => navigate("run-stats"));
 $("score-menu").addEventListener("click", () => navigate("menu"));
+$("score-skip").addEventListener("click", skipScoreSequence);
 $("score-next").addEventListener("click", advanceRunRound);
 $("results-new-run").addEventListener("click", startRun);
 $("results-classic").addEventListener("click", () => navigate("floor"));

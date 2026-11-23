@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-19-segmented-screens">
+  <link rel="stylesheet" href="style.css?v=2026-11-23-scoring-ceremony">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -205,6 +205,16 @@
           <p class="score-jokers-label">Jokers active this round</p>
           <div id="score-joker-grid" class="score-joker-grid"></div>
         </div>
+        <div class="score-breakdown">
+          <div class="score-line">
+            <span class="score-line-label">Chips</span>
+            <div id="score-chips" class="score-line-value">0</div>
+          </div>
+          <div class="score-line score-line-mult">
+            <span class="score-line-label">Mult</span>
+            <div id="score-mult" class="score-line-value">×1</div>
+          </div>
+        </div>
         <div class="score-total">
           <div>
             <span class="score-total-label">Round score</span>
@@ -215,6 +225,7 @@
         <div class="score-meter" aria-hidden="true"><span id="score-meter-fill"></span></div>
         <div class="score-actions">
           <button id="score-menu" class="link-button" type="button">Menu</button>
+          <button id="score-skip" class="link-button" type="button">Skip</button>
           <button id="score-next" type="button">Next round</button>
         </div>
       </div>
@@ -540,6 +551,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-19-segmented-screens"></script>
+  <script src="game.js?v=2026-11-23-scoring-ceremony"></script>
 </body>
 </html>

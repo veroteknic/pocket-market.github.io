@@ -890,6 +890,34 @@ button.tap { animation: button-pop 160ms ease-out; }
 .score-effect[data-kind="mult"] .score-effect-value,
 .score-effect[data-kind="mult-add"] .score-effect-value { color: var(--gold); }
 
+/* Chips × mult — the two numbers that build the score, set large so the
+   formula reads before the total lands. */
+.score-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+.score-line {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+.score-line-label {
+  display: block;
+  color: var(--faint);
+  font: 600 9.5px/1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.score-line-value {
+  margin-top: 8px;
+  color: var(--green);
+  font: 400 clamp(26px, 5vw, 44px)/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.score-line-mult .score-line-value { color: var(--gold); }
+
 /* ---------- Scoring joker activation ----------
 
   During scoring, each Joker that fired shows a miniature card that pulses
@@ -1348,6 +1376,7 @@ body.dev-open { padding-right: 410px; }
   .results-shell { padding-top: 6px; }
   .score-head { flex-direction: column; align-items: flex-start; gap: 10px; }
   .score-target { text-align: left; }
+  .score-breakdown { grid-template-columns: 1fr; gap: 8px; }
   .score-total { grid-template-columns: 1fr; gap: 8px; }
   .score-verdict { justify-self: start; }
   .score-actions { flex-direction: column-reverse; align-items: stretch; }
