@@ -1729,6 +1729,12 @@ async function loadClassicAccount() {
 }
 
 async function prepareFloor() {
+  if (!runState) {
+    floorMode = "classic";
+    await loadClassicAccount();
+    $("floor-mode").textContent = floorMode === "run" ? "Run" : "Classic board";
+    return;
+  }
   if (isRunTrading()) {
     floorMode = "run";
     applyRunAccount();
@@ -2009,9 +2015,24 @@ $("results-menu").addEventListener("click", () => navigate("menu"));
 $("collection-back").addEventListener("click", () => navigate("menu"));
 $("shop-back").addEventListener("click", () => navigate("menu"));
 $("boss-back").addEventListener("click", () => navigate("menu"));
-$("boss-start").addEventListener("click", () => {
+$("boss-start").addEventListener("click", async () => {
   proceedToFloorAfterBoss = true;
-  navigate("floor");
+  try {
+    await navigate("floor");
+  } catch (error) {
+    console.error("Boss start error:", error);
+    // Fallback: force floor visible
+    try {
+      await prepareFloor();
+      setScreen("floor");
+      render();
+      renderRunStrip();
+      history.replaceState(null, "", "#floor");
+      window.scrollTo(0, 0);
+    } catch (e) {
+      console.error("Boss start fallback error:", e);
+    }
+  }
 });
 $("setup-start").addEventListener("click", () => navigate("floor"));
 $("intro-start").addEventListener("click", () => navigate("floor"));
