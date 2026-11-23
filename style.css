@@ -812,6 +812,52 @@ button.tap { animation: button-pop 160ms ease-out; }
 .run-strip.boss-round { border: 1px solid var(--brass); border-radius: 4px; }
 .run-strip.boss-round .run-cell.boss-cell { color: var(--brass); border-color: var(--brass); }
 .run-strip.boss-round .run-cell.boss-cell strong { color: var(--gold); }
+
+/* Jokers stay visible on the trading floor so the build is always readable. */
+.floor-joker-tray {
+  padding: 12px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.floor-joker-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: var(--faint);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.floor-joker-head small { color: var(--brass); font-size: 10px; }
+.floor-joker-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.floor-joker-card {
+  width: 92px;
+  min-height: 82px;
+  padding: 9px 8px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.floor-joker-card .floor-joker-glyph { font-size: 21px; line-height: 1; }
+.floor-joker-card .floor-joker-name {
+  margin-top: 6px;
+  font: 600 10px/1.2 var(--display);
+  letter-spacing: -0.01em;
+}
+.floor-joker-card .floor-joker-rarity {
+  margin-top: 5px;
+  color: var(--muted);
+  font: 600 8px/1 var(--mono);
+  letter-spacing: 0.14em;
+}
+.floor-joker-card[data-rarity="rare"] .floor-joker-rarity { color: #6a8fd0; }
+.floor-joker-card[data-rarity="epic"] .floor-joker-rarity { color: #a779d0; }
+.floor-joker-card[data-rarity="legendary"] .floor-joker-rarity { color: var(--gold); }
+.floor-joker-detail {
+  min-height: 14px;
+  margin: 9px 0 0;
+  color: var(--muted);
+  font: 10.5px/1.4 var(--mono);
+}
 .score-boss {
   margin: 8px 0 0;
   color: var(--gold);

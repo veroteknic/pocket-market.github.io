@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-23-scoring-ceremony">
+  <link rel="stylesheet" href="style.css?v=2026-11-23-joker-tray">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -86,6 +86,15 @@
           <button id="run-retire" class="run-retire" type="button">this is too hard...</button>
         </div>
       </section>
+
+      <div id="floor-joker-tray" class="floor-joker-tray" hidden>
+        <div class="floor-joker-head">
+          <span>Active Jokers</span>
+          <small id="floor-joker-count">0</small>
+        </div>
+        <div id="floor-joker-cards" class="floor-joker-cards"></div>
+        <p id="floor-joker-detail" class="floor-joker-detail"></p>
+      </div>
 
     <div class="tick-strip" aria-hidden="true">
       <div class="tick-meter"><span id="tick-fill"></span></div>
@@ -551,6 +560,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-23-scoring-ceremony"></script>
+  <script src="game.js?v=2026-11-23-joker-tray"></script>
 </body>
 </html>

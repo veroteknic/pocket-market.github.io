@@ -979,11 +979,57 @@ function runRulesFrom(payload) {
   runRules = { ...runRules, ...payload.rules };
 }
 
+function renderFloorJokers(live) {
+  const tray = $("floor-joker-tray");
+  const cards = $("floor-joker-cards");
+  const detail = $("floor-joker-detail");
+  const count = $("floor-joker-count");
+  if (!tray || !cards || !detail) return;
+  const owned = runState?.jokers || [];
+  if (!live || !owned.length || !jokerCatalog?.jokers) {
+    tray.hidden = true;
+    return;
+  }
+  tray.hidden = false;
+  const byId = {};
+  jokerCatalog.jokers.forEach(joker => { byId[joker.id] = joker; });
+  cards.replaceChildren();
+  let first = null;
+  owned.forEach(id => {
+    const joker = byId[id];
+    if (!joker) return;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "floor-joker-card card";
+    card.dataset.rarity = joker.rarity;
+    card.innerHTML = `
+      <span class="floor-joker-glyph">${joker.glyph}</span>
+      <span class="floor-joker-name">${joker.name}</span>
+      <span class="floor-joker-rarity">${joker.rarity.slice(0, 3).toUpperCase()}</span>
+    `;
+    card.addEventListener("click", () => {
+      [...cards.children].forEach(other => other.classList.remove("is-selected"));
+      card.classList.add("is-selected");
+      detail.textContent = `${joker.name} — ${joker.description}`;
+    });
+    if (!first) first = joker;
+    cards.append(card);
+  });
+  if (!first) {
+    tray.hidden = true;
+    return;
+  }
+  cards.firstElementChild.classList.add("is-selected");
+  detail.textContent = `${first.name} — ${first.description}`;
+  if (count) count.textContent = String(cards.children.length);
+}
+
 function renderRunStrip() {
   const strip = $("run-strip");
   if (!strip) return;
   const live = floorMode === "run" && isRunTrading();
   strip.hidden = !live;
+  renderFloorJokers(live);
   if (!live) return;
   $("run-ante").textContent = `${runState.ante} / ${runRules.antes}`;
   $("run-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;
@@ -1736,7 +1782,6 @@ function renderShopScreen() {
       const card = document.createElement("article");
       card.className = "shop-card card";
       card.dataset.rarity = rarity;
-      card.dataset.jokerId = joker.id;
       const owned = shopState.owned.includes(joker.id);
       const affordable = shopState.currency >= offer.price;
       card.innerHTML = `
