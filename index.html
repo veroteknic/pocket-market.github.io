@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-23-shop-feel">
+  <link rel="stylesheet" href="style.css?v=2026-11-23-collection-detail">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -273,7 +273,25 @@
           <h2 class="collection-title">Collection</h2>
           <p id="collection-count" class="collection-count">— jokers</p>
         </header>
-        <div id="collection-grid" class="collection-grid"></div>
+        <div class="collection-layout">
+          <div id="collection-grid" class="collection-grid"></div>
+          <aside id="collection-detail" class="collection-detail" hidden>
+            <div class="detail-hero">
+              <span id="detail-glyph" class="detail-glyph">◇</span>
+              <div>
+                <span id="detail-rarity" class="detail-rarity">Common</span>
+                <h3 id="detail-name" class="detail-name">—</h3>
+              </div>
+            </div>
+            <p id="detail-desc" class="detail-desc"></p>
+            <dl class="detail-stats">
+              <div><dt>Trigger</dt><dd id="detail-trigger">—</dd></div>
+              <div><dt>Effect</dt><dd id="detail-effect">—</dd></div>
+              <div><dt>Value</dt><dd id="detail-value">—</dd></div>
+              <div><dt>Status</dt><dd id="detail-status">—</dd></div>
+            </dl>
+          </aside>
+        </div>
         <p id="collection-empty" class="collection-empty" hidden>—</p>
       </div>
     </section>
@@ -561,6 +579,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-23-shop-feel"></script>
+  <script src="game.js?v=2026-11-23-collection-detail"></script>
 </body>
 </html>

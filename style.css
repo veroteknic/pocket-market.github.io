@@ -1481,11 +1481,89 @@ body.dev-open { padding-right: 410px; }
   text-transform: uppercase;
 }
 
+.collection-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+  align-items: start;
+}
+
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 14px;
 }
+
+.collection-detail {
+  position: sticky;
+  top: 20px;
+  padding: 16px;
+  border: 1px solid var(--line-bright);
+  border-radius: 6px;
+  background: #1a150e;
+  box-shadow: 0 12px 30px var(--surface-shadow);
+}
+.detail-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.detail-glyph {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border: 1px solid var(--brass);
+  border-radius: 4px;
+  color: var(--gold);
+  font-size: 30px;
+  line-height: 1;
+}
+.detail-rarity {
+  color: var(--brass);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.detail-name {
+  margin: 7px 0 0;
+  font: 600 20px/1.1 var(--display);
+  letter-spacing: -0.02em;
+}
+.detail-desc {
+  margin: 14px 0 16px;
+  color: var(--ink);
+  font: 12px/1.55 var(--mono);
+}
+.detail-stats { margin: 0; }
+.detail-stats > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.detail-stats dt {
+  color: var(--faint);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.detail-stats dd {
+  margin: 0;
+  color: var(--muted);
+  font: 10px/1.2 var(--mono);
+  text-align: right;
+}
+.detail-stats dd.is-owned { color: var(--gold); }
+.collection-detail[data-rarity="common"] .detail-rarity { color: #8a7c6a; }
+.collection-detail[data-rarity="uncommon"] .detail-rarity { color: #3d7d5a; }
+.collection-detail[data-rarity="rare"] .detail-rarity { color: #a06b3d; }
+.collection-detail[data-rarity="epic"] .detail-rarity { color: #a779d0; }
+.collection-detail[data-rarity="legendary"] .detail-rarity { color: var(--gold); }
 
 .collection-rarity {
   margin: 0 0 10px;
@@ -1498,8 +1576,23 @@ body.dev-open { padding-right: 410px; }
 }
 
 .joker-card {
-  /* Base box model, hover lift and activation live on .card; this selector is
-     kept so the rarity text-color rules below still apply. */
+  /* Base box model, hover lift and activation live on .card; this selector
+     adds selection, discovery framing and a dealt-in entrance. */
+  cursor: pointer;
+  animation: shopDeal 280ms ease backwards;
+  animation-delay: calc(var(--deal-index, 0) * 30ms);
+}
+.joker-card:not(.is-owned) .joker-glyph { opacity: 0.4; }
+.joker-card.is-owned::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
 }
 
 .joker-glyph {
@@ -1553,6 +1646,11 @@ body.dev-open { padding-right: 410px; }
 }
 
 /* ---------- Collection responsive ---------- */
+
+@media (max-width: 900px) {
+  .collection-layout { grid-template-columns: 1fr; }
+  .collection-detail { position: static; }
+}
 
 @media (max-width: 640px) {
   .collection-shell { padding: 16px 0; }

@@ -1708,6 +1708,41 @@ async function loadShopState() {
   }
 }
 
+function humanizeToken(value) {
+  return String(value || "—").replace(/-/g, " ").replace(/\b\w/g, character => character.toUpperCase());
+}
+
+function jokerEffectLabel(kind) {
+  if (kind === "chips-add") return "+ Chips";
+  if (kind === "mult-add") return "+ Mult";
+  if (kind === "mult") return "× Mult";
+  return humanizeToken(kind);
+}
+
+function jokerValueLabel(joker) {
+  const value = Number(joker.value);
+  if (!Number.isFinite(value)) return "—";
+  if (joker.effectKind === "mult") return `×${Number(value.toFixed(2))}`;
+  return `+${value.toLocaleString()}`;
+}
+
+function showJokerDetail(joker, owned) {
+  const detail = $("collection-detail");
+  if (!detail || !joker) return;
+  detail.hidden = false;
+  detail.dataset.rarity = joker.rarity;
+  $("detail-glyph").textContent = joker.glyph || "◇";
+  $("detail-rarity").textContent = joker.rarity;
+  $("detail-name").textContent = joker.name;
+  $("detail-desc").textContent = joker.description;
+  $("detail-trigger").textContent = humanizeToken(joker.trigger);
+  $("detail-effect").textContent = jokerEffectLabel(joker.effectKind);
+  $("detail-value").textContent = jokerValueLabel(joker);
+  const status = $("detail-status");
+  status.textContent = owned ? "Owned" : "Not owned";
+  status.classList.toggle("is-owned", Boolean(owned));
+}
+
 function renderCollectionScreen() {
   const grid = $("collection-grid");
   const count = $("collection-count");
@@ -1717,16 +1752,20 @@ function renderCollectionScreen() {
     grid.replaceChildren();
     count.textContent = "—";
     empty.hidden = false;
+    if ($("collection-detail")) $("collection-detail").hidden = true;
     return true;
   }
   empty.hidden = true;
-  count.textContent = `${jokerCatalog.jokers.length} jokers`;
+  const ownedIds = new Set([...(shopState?.owned || []), ...(runState?.jokers || [])]);
+  const ownedCount = jokerCatalog.jokers.filter(joker => ownedIds.has(joker.id)).length;
+  count.textContent = ownedIds.size ? `${ownedCount} / ${jokerCatalog.jokers.length} owned` : `${jokerCatalog.jokers.length} jokers`;
   grid.replaceChildren();
   const byRarity = {};
   for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
     byRarity[rarity] = jokerCatalog.jokers.filter(joker => joker.rarity === rarity);
   }
-  let any = false;
+  let dealIndex = 0;
+  let first = null;
   for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
     const group = byRarity[rarity];
     if (!group.length) continue;
@@ -1735,18 +1774,34 @@ function renderCollectionScreen() {
     header.textContent = rarity.charAt(0).toUpperCase() + rarity.slice(1);
     grid.append(header);
     for (const joker of group) {
-      const card = document.createElement("article");
+      const owned = ownedIds.has(joker.id);
+      const card = document.createElement("button");
+      card.type = "button";
       card.className = "joker-card card";
+      if (owned) card.classList.add("is-owned");
       card.dataset.rarity = rarity;
+      card.style.setProperty("--deal-index", String(dealIndex++));
       card.innerHTML = `
         <div class="joker-glyph">${joker.glyph}</div>
         <h3 class="joker-name">${joker.name}</h3>
         <span class="joker-rarity">${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</span>
         <p class="joker-desc">${joker.description}</p>
       `;
+      card.addEventListener("click", () => {
+        [...grid.querySelectorAll(".joker-card.is-selected")].forEach(other => other.classList.remove("is-selected"));
+        card.classList.add("is-selected");
+        showJokerDetail(joker, owned);
+        cue("tick");
+      });
       grid.append(card);
-      any = true;
+      if (!first) first = { card, joker, owned };
     }
+  }
+  if (first) {
+    first.card.classList.add("is-selected");
+    showJokerDetail(first.joker, first.owned);
+  } else if ($("collection-detail")) {
+    $("collection-detail").hidden = true;
   }
   return true;
 }
