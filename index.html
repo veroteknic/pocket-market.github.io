@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-23-collection-detail">
+  <link rel="stylesheet" href="style.css?v=2026-11-23-split-views">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -66,6 +66,11 @@
           <button id="floor-menu" class="wordmark" type="button">Pocket Market</button>
           <p id="floor-mode" class="floor-mode">Classic board</p>
         </div>
+        <nav class="game-tabs" aria-label="Run views">
+          <button type="button" data-nav-screen="floor" class="is-current">Market</button>
+          <button type="button" data-nav-screen="portfolio">Portfolio</button>
+          <button type="button" data-nav-screen="jokers">Jokers</button>
+        </nav>
         <div class="masthead-side">
           <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Sound" aria-pressed="true">Sound: on</button>
         </div>
@@ -87,13 +92,11 @@
         </div>
       </section>
 
-      <div id="floor-joker-tray" class="floor-joker-tray" hidden>
-        <div class="floor-joker-head">
-          <span>Active Jokers</span>
-          <small id="floor-joker-count">0</small>
-        </div>
-        <div id="floor-joker-cards" class="floor-joker-cards"></div>
-        <p id="floor-joker-detail" class="floor-joker-detail"></p>
+      <div id="floor-score-hud" class="score-hud floor-score-hud" hidden>
+        <div class="hud-chip"><span>Chips</span><strong id="floor-preview-chips">—</strong></div>
+        <span class="hud-times">×</span>
+        <div class="hud-mult"><span>Mult</span><strong id="floor-preview-mult">—</strong></div>
+        <div class="hud-score"><span>Preview</span><strong id="floor-preview-score">—</strong></div>
       </div>
 
     <div class="tick-strip" aria-hidden="true">
@@ -194,6 +197,98 @@
     <footer class="colophon">
       <p>ITS NOT ACTUAL MONEY YOU BROKE BUM.</p>
     </footer>
+    </section>
+
+    <section id="screen-portfolio" class="screen screen-portfolio" data-screen="portfolio" hidden>
+      <header class="masthead">
+        <div>
+          <button id="portfolio-menu" class="wordmark" type="button">Pocket Market</button>
+          <p class="floor-mode">Portfolio</p>
+        </div>
+        <nav class="game-tabs" aria-label="Run views">
+          <button type="button" data-nav-screen="floor">Market</button>
+          <button type="button" data-nav-screen="portfolio" class="is-current">Portfolio</button>
+          <button type="button" data-nav-screen="jokers">Jokers</button>
+        </nav>
+        <div class="masthead-side"></div>
+      </header>
+      <div class="portfolio-shell">
+        <header class="portfolio-head">
+          <div>
+            <p class="view-kicker">Holdings</p>
+            <h2 class="view-title">Portfolio</h2>
+          </div>
+          <div class="portfolio-run">
+            <span id="portfolio-run-label">Ante 1 · Round 1</span>
+            <strong id="portfolio-target">Target 120</strong>
+          </div>
+        </header>
+        <div class="portfolio-metrics">
+          <div class="metric"><span>Cash</span><strong id="portfolio-cash">$10,000.00</strong></div>
+          <div class="metric"><span>Holdings</span><strong id="portfolio-holdings-value">$0.00</strong></div>
+          <div class="metric"><span>Net worth</span><strong id="portfolio-net">$10,000.00</strong></div>
+          <div class="metric"><span>P/L</span><strong id="portfolio-pl">$0.00</strong></div>
+        </div>
+        <div class="score-hud portfolio-hud" aria-label="Score preview">
+          <div class="hud-chip"><span>Chips</span><strong id="portfolio-preview-chips">—</strong></div>
+          <span class="hud-times">×</span>
+          <div class="hud-mult"><span>Mult</span><strong id="portfolio-preview-mult">—</strong></div>
+          <div class="hud-score"><span>Preview</span><strong id="portfolio-preview-score">—</strong></div>
+        </div>
+        <div id="portfolio-holdings" class="portfolio-holdings"></div>
+        <p id="portfolio-empty" class="portfolio-empty" hidden>No positions</p>
+        <div class="portfolio-actions">
+          <button id="portfolio-lock" class="run-lock" type="button">Done</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-jokers" class="screen screen-jokers" data-screen="jokers" hidden>
+      <header class="masthead">
+        <div>
+          <button id="jokers-menu" class="wordmark" type="button">Pocket Market</button>
+          <p class="floor-mode">Jokers</p>
+        </div>
+        <nav class="game-tabs" aria-label="Run views">
+          <button type="button" data-nav-screen="floor">Market</button>
+          <button type="button" data-nav-screen="portfolio">Portfolio</button>
+          <button type="button" data-nav-screen="jokers" class="is-current">Jokers</button>
+        </nav>
+        <div class="masthead-side">
+          <button id="jokers-browse" class="link-button" type="button">Browse all</button>
+        </div>
+      </header>
+      <div class="jokers-shell">
+        <header class="jokers-head">
+          <div>
+            <p class="view-kicker">Your build</p>
+            <h2 class="view-title">Jokers</h2>
+          </div>
+          <div class="jokers-head-side">
+            <span id="jokers-run-label">Ante 1 · Round 1</span>
+            <strong id="jokers-count">0</strong>
+          </div>
+        </header>
+        <div class="jokers-layout">
+          <div id="jokers-grid" class="jokers-grid"></div>
+          <p id="jokers-empty" class="jokers-empty" hidden>No jokers yet</p>
+          <aside id="active-joker-detail" class="active-joker-detail" hidden>
+            <div class="detail-hero">
+              <div id="active-detail-art" class="detail-art"></div>
+              <div>
+                <span id="active-detail-rarity" class="detail-rarity">Common</span>
+                <h3 id="active-detail-name" class="detail-name">—</h3>
+              </div>
+            </div>
+            <p id="active-detail-desc" class="detail-desc"></p>
+            <dl class="detail-stats">
+              <div><dt>Trigger</dt><dd id="active-detail-trigger">—</dd></div>
+              <div><dt>Effect</dt><dd id="active-detail-effect">—</dd></div>
+              <div><dt>Value</dt><dd id="active-detail-value">—</dd></div>
+            </dl>
+          </aside>
+        </div>
+      </div>
     </section>
 
     <section id="screen-score" class="screen screen-score" data-screen="score" hidden>
@@ -579,6 +674,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-23-collection-detail"></script>
+  <script src="game.js?v=2026-11-23-split-views"></script>
 </body>
 </html>

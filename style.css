@@ -813,51 +813,6 @@ button.tap { animation: button-pop 160ms ease-out; }
 .run-strip.boss-round .run-cell.boss-cell { color: var(--brass); border-color: var(--brass); }
 .run-strip.boss-round .run-cell.boss-cell strong { color: var(--gold); }
 
-/* Jokers stay visible on the trading floor so the build is always readable. */
-.floor-joker-tray {
-  padding: 12px 0 14px;
-  border-bottom: 1px solid var(--line);
-}
-.floor-joker-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 9px;
-  color: var(--faint);
-  font: 600 9px/1 var(--mono);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-.floor-joker-head small { color: var(--brass); font-size: 10px; }
-.floor-joker-cards { display: flex; flex-wrap: wrap; gap: 8px; }
-.floor-joker-card {
-  width: 92px;
-  min-height: 82px;
-  padding: 9px 8px;
-  color: var(--ink);
-  cursor: pointer;
-}
-.floor-joker-card .floor-joker-glyph { font-size: 21px; line-height: 1; }
-.floor-joker-card .floor-joker-name {
-  margin-top: 6px;
-  font: 600 10px/1.2 var(--display);
-  letter-spacing: -0.01em;
-}
-.floor-joker-card .floor-joker-rarity {
-  margin-top: 5px;
-  color: var(--muted);
-  font: 600 8px/1 var(--mono);
-  letter-spacing: 0.14em;
-}
-.floor-joker-card[data-rarity="rare"] .floor-joker-rarity { color: #6a8fd0; }
-.floor-joker-card[data-rarity="epic"] .floor-joker-rarity { color: #a779d0; }
-.floor-joker-card[data-rarity="legendary"] .floor-joker-rarity { color: var(--gold); }
-.floor-joker-detail {
-  min-height: 14px;
-  margin: 9px 0 0;
-  color: var(--muted);
-  font: 10.5px/1.4 var(--mono);
-}
 .score-boss {
   margin: 8px 0 0;
   color: var(--gold);
@@ -1582,7 +1537,7 @@ body.dev-open { padding-right: 410px; }
   animation: shopDeal 280ms ease backwards;
   animation-delay: calc(var(--deal-index, 0) * 30ms);
 }
-.joker-card:not(.is-owned) .joker-glyph { opacity: 0.4; }
+.collection-grid .joker-card:not(.is-owned) .joker-art { opacity: 0.35; }
 .joker-card.is-owned::after {
   content: "";
   position: absolute;
@@ -2703,4 +2658,282 @@ body.dev-open { padding-right: 410px; }
   .victory-actions .link-button,
   .failure-actions .link-button,
   .stats-actions .link-button { width: 100%; }
+}
+
+/* ---------- Run views + arcade scoring HUD ----------
+   Market, Portfolio and Jokers are separate screens. The chips × mult HUD
+   borrows arcade-card game clarity: blue chips, red mult, huge tabular numbers.
+   All artwork is original geometric CSS/SVG, not copied card art. */
+
+:root {
+  --chip: #3f72c4;
+  --chip-deep: #244a8a;
+  --mult: #d44858;
+  --mult-deep: #8f2436;
+}
+
+.game-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.22);
+}
+.game-tabs button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--muted);
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.game-tabs button:hover { color: var(--ink); }
+.game-tabs button.is-current {
+  background: var(--brass);
+  color: #17130c;
+}
+
+.view-kicker {
+  margin: 0 0 8px;
+  color: var(--brass);
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.view-title {
+  margin: 0;
+  font: 600 clamp(34px, 7vw, 52px)/0.95 var(--display);
+  letter-spacing: -0.03em;
+}
+
+.score-hud {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 18px 0 22px;
+}
+.hud-chip, .hud-mult, .hud-score {
+  position: relative;
+  min-width: 120px;
+  padding: 12px 18px 12px 24px;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  border-left: 4px solid rgba(255, 255, 255, 0.35);
+}
+.hud-chip { background: linear-gradient(120deg, var(--chip-deep), var(--chip)); color: #fff; }
+.hud-mult { background: linear-gradient(120deg, var(--mult-deep), var(--mult)); color: #fff; }
+.hud-score {
+  background: var(--white);
+  border: 1px solid var(--line-strong);
+  clip-path: none;
+  color: var(--ink);
+}
+.hud-chip span, .hud-mult span, .hud-score span {
+  display: block;
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.hud-chip strong, .hud-mult strong, .hud-score strong {
+  display: block;
+  margin-top: 8px;
+  font: 400 clamp(24px, 4vw, 38px)/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.hud-times {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font: 600 22px/1 var(--display);
+}
+
+.score-breakdown .score-line {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.score-breakdown .score-line:first-child {
+  padding: 14px 18px 14px 24px;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  background: linear-gradient(120deg, var(--chip-deep), var(--chip));
+  color: #fff;
+}
+.score-breakdown .score-line-mult {
+  padding: 14px 18px 14px 24px;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  background: linear-gradient(120deg, var(--mult-deep), var(--mult));
+  color: #fff;
+}
+.score-breakdown .score-line-label { color: rgba(255, 255, 255, 0.8); }
+.score-breakdown .score-line-value,
+.score-breakdown .score-line-mult .score-line-value { color: #fff; }
+
+.portfolio-shell, .jokers-shell {
+  width: min(1000px, 100%);
+  margin: 0 auto;
+  padding: 24px 0;
+}
+.portfolio-head, .jokers-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-bright);
+}
+.portfolio-run, .jokers-head-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  color: var(--muted);
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.portfolio-run strong, .jokers-head-side strong { color: var(--gold); font-size: 16px; }
+.portfolio-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+.metric {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+}
+.metric span {
+  display: block;
+  color: var(--faint);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.metric strong {
+  display: block;
+  margin-top: 8px;
+  font: 400 18px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.portfolio-holdings {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.holding-card {
+  position: relative;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper);
+}
+.holding-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.holding-top h3 { margin: 0; font: 600 17px/1.2 var(--display); }
+.holding-top span { color: var(--faint); font: 600 10px/1 var(--mono); }
+.holding-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 11px/1.2 var(--mono);
+}
+.holding-row strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.holding-card .up { color: var(--green); }
+.holding-card .down { color: var(--red); }
+.portfolio-empty, .jokers-empty {
+  padding: 40px 0;
+  color: var(--faint);
+  font: 11px/1.6 var(--mono);
+  text-align: center;
+}
+.portfolio-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+
+.jokers-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+  align-items: start;
+  margin-top: 20px;
+}
+.jokers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+.active-joker-card {
+  width: 100%;
+  min-height: 232px;
+  padding: 12px 12px 16px;
+  text-align: left;
+  align-items: stretch;
+  cursor: pointer;
+  animation: shopDeal 300ms ease backwards;
+  animation-delay: calc(var(--deal-index, 0) * 45ms);
+}
+.joker-art {
+  display: block;
+  height: 104px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: radial-gradient(circle at 50% 40%, #242019, #12100b 75%);
+  overflow: hidden;
+}
+.joker-art svg { display: block; width: 100%; height: 100%; }
+.shop-art.joker-art { height: 92px; margin-bottom: 10px; }
+.score-joker-art.joker-art { height: 46px; margin-bottom: 6px; }
+.floor-score-hud { margin: 0 0 14px; }
+.active-joker-card .joker-name { margin-bottom: 5px; }
+.active-joker-card .joker-rarity { margin-bottom: 6px; }
+.active-joker-card .joker-desc { font-size: 10px; }
+.active-joker-detail { position: sticky; top: 20px; }
+.detail-art {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border: 1px solid var(--brass);
+  border-radius: 4px;
+  background: radial-gradient(circle at 50% 40%, #242019, #12100b 75%);
+  overflow: hidden;
+}
+.detail-art svg { width: 100%; height: 100%; }
+.active-joker-detail[data-rarity="common"] .detail-rarity { color: #8a7c6a; }
+.active-joker-detail[data-rarity="uncommon"] .detail-rarity { color: #3d7d5a; }
+.active-joker-detail[data-rarity="rare"] .detail-rarity { color: #a06b3d; }
+.active-joker-detail[data-rarity="epic"] .detail-rarity { color: #a779d0; }
+.active-joker-detail[data-rarity="legendary"] .detail-rarity { color: var(--gold); }
+
+@media (max-width: 900px) {
+  .jokers-layout { grid-template-columns: 1fr; }
+  .active-joker-detail { position: static; }
+}
+@media (max-width: 640px) {
+  .game-tabs { order: 3; width: 100%; justify-content: stretch; }
+  .game-tabs button { flex: 1; padding: 9px 6px; }
+  .screen-floor .masthead, .screen-portfolio .masthead, .screen-jokers .masthead { flex-wrap: wrap; }
+  .score-hud { flex-wrap: wrap; }
+  .hud-chip, .hud-mult { flex: 1; min-width: 130px; }
+  .hud-score { flex: 1 0 100%; }
+  .portfolio-metrics { grid-template-columns: repeat(2, 1fr); }
+  .shop-art.joker-art { height: 76px; }
+  .score-joker-art.joker-art { height: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .active-joker-card { animation: none !important; }
 }
