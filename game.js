@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.2";
+const VERSION = "2026-11-25.3";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -679,6 +679,29 @@ function setRollingMoney(id, target, profit = false) {
   hudFrames.set(id, requestAnimationFrame(update));
 }
 
+// The chart's selected company is also the highlighted security on the board.
+// One source of truth keeps the market directory and the tape in sync.
+function applySecuritySelection() {
+  const ticker = $("chart-stock")?.value;
+  if (!ticker) return;
+  document.querySelectorAll("#market tr[data-ticker]").forEach(row => {
+    const selected = row.dataset.ticker === ticker;
+    row.classList.toggle("is-selected", selected);
+    if (selected) row.setAttribute("aria-current", "true");
+    else row.removeAttribute("aria-current");
+  });
+}
+
+function selectSecurity(ticker) {
+  const select = $("chart-stock");
+  if (!select || !state.companies.some(company => company.ticker === ticker)) return;
+  if (select.value !== ticker) {
+    select.value = ticker;
+    drawChart();
+  }
+  applySecuritySelection();
+}
+
 function render() {
   $("day").textContent = state.day;
   const portfolio = portfolioValue();
@@ -700,6 +723,7 @@ function render() {
         <button data-action="sell" data-index="${index}" ${pendingTrade ? "disabled" : ""}>Sell</button>
       </td>
     </tr>`).join("");
+  applySecuritySelection();
   drawChart();
   renderRunStrip();
   if (activeScreen === "portfolio") renderPortfolioScreen();
@@ -2641,10 +2665,15 @@ async function rerollShop() {
 }
 
 $("market").addEventListener("click", event => {
+  const row = event.target.closest("tr[data-ticker]");
   const button = event.target.closest("button");
+  if (row) selectSecurity(row.dataset.ticker);
   if (button) trade(Number(button.dataset.index), button.dataset.action);
 });
-$("chart-stock").addEventListener("change", drawChart);
+$("chart-stock").addEventListener("change", () => {
+  applySecuritySelection();
+  drawChart();
+});
 document.querySelectorAll(".chart-tab").forEach(button => {
   button.addEventListener("click", () => setChartRange(button.dataset.range));
 });

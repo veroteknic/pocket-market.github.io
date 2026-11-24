@@ -1,5 +1,10 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.3 — Game-first board focus
+
+- Selecting a security on the market board now brings it into focus with a brass edge; the price-history tape follows the same selection. One source of truth keeps the two in sync.
+- Removed remaining website-like text: the "this is too hard..." retire label is now "Retire run", and redundant Portfolio/Jokers masthead captions are gone.
+
 ## 2026-11-25.2 — Joker preview activation
 
 - Owned Jokers now visibly mark when they contribute to the live round-score preview: the rail card gains a brass state and a value badge, and a contribution strip beneath the HUD lists each contributing Joker with its effect (+25 chips, +0.25× mult, etc.).

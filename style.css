@@ -295,6 +295,13 @@ td {
 }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: rgba(212, 155, 72, 0.045); }
+/* The selected security is the one shown on the tape. It rises above the
+   directory with a brass edge instead of relying on colour alone. */
+.market-table tbody tr.is-selected {
+  background: rgba(212, 155, 72, 0.09);
+  box-shadow: inset 3px 0 0 var(--brass);
+}
+.market-table tbody tr.is-selected .company-name { color: var(--gold); }
 .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 th.num { font-family: var(--mono); }
 td.num { font-size: 13px; color: var(--muted); }
