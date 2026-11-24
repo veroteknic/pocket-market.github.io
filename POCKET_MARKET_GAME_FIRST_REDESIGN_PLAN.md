@@ -202,6 +202,17 @@ behaviour changed in this pass.
 
 Verified: syntax, 51/51 browser flow checks, 4/4 responsive layout audits, 17/17 production checks.
 
+## Phase 3 audit — where the UI still reads as a website
+
+Reviewed against the Balatro-inspired design brief (principles only, no copied art/layout/branding):
+
+- **Resolved in 2f/3:** Jokers were passive information; they now light up and sound when they affect the preview. The board had no focus concept; selecting a security now drives the tape and gives that row a brass edge. Redundant captions and the last flavourtext label are gone.
+- **Remaining — menu composition:** the menu is still a vertical list of equal-size buttons. Needs a clear primary action and a compact secondary control cluster while keeping all existing IDs and the classic-board escape hatch.
+- **Remaining — secondary panels:** price-history, dispatches and leaderboard are displayed at the same visual weight as the board. They should be visually subordinate without losing readability or accessibility.
+- **Remaining — screen identity:** shop/results/boss have distinct markup but still share a header-heavy layout. Needs per-screen composition, not a generic panel template.
+- **Remaining — trading tactility:** a fill updates numbers but the bought position does not visually enter the portfolio; a stronger buy/sell consequence is still missing.
+- **Not in scope:** new gameplay, backend changes, settings/achievements invented as placeholders.
+
 ## Next milestone
 
 Phase 3: restructure the existing trading floor into one cohesive terminal composition (company cards,
