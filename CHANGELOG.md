@@ -1,5 +1,11 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.8 — Clean multiplier labels
+
+- Fixed Joker preview badges showing binary-float artefacts such as `+0.8999999999999999× mult`; a three-round Diamond Hands streak now reads `+0.9× mult`.
+- Additive multiplier Jokers now show their `×` unit on their card as well as in the preview strip.
+- Added a regression check that exercises the exact float-artifact case.
+
 ## 2026-11-25.7 — Content depth and readable states
 
 - Owned Joker cards now show their effect kind and value on the card itself, so a collection can be compared without opening each detail panel.

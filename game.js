@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.7";
+const VERSION = "2026-11-25.8";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -376,9 +376,12 @@ function marketDirectionClient(pricesEnd, pricesStart) {
 function computeJokerPreview(joker, ctx) {
   const { distinct, rising, falling, md, tradeCount, roundIndex, pricesEnd, pricesStart, held } = ctx;
   const { id, effectKind, value, trigger, threshold, max } = joker;
-  const multAdd = (label, amount) => ({ kind: "mult-add", label, value: amount });
-  const chipsAdd = (label, amount) => ({ kind: "chips-add", label, value: amount });
-  const mult = (label, amount) => ({ kind: "mult", label, value: amount });
+  // Preview values are display-only. Tidy binary-float artefacts here so a
+  // three-round 0.3 streak reads as 0.9, never 0.8999999999999999.
+  const tidyMult = amount => Number(Number(amount).toFixed(2));
+  const multAdd = (label, amount) => ({ kind: "mult-add", label, value: tidyMult(amount) });
+  const chipsAdd = (label, amount) => ({ kind: "chips-add", label, value: Math.round(amount) });
+  const mult = (label, amount) => ({ kind: "mult", label, value: tidyMult(amount) });
 
   switch (trigger) {
     case "always":
@@ -506,9 +509,10 @@ function previewJokerContributions() {
 
 function jokerContributionLabel(effect) {
   const value = Number(effect.value) || 0;
-  if (effect.kind === "chips-add") return `+${value.toLocaleString()} chips`;
-  if (effect.kind === "mult-add") return `+${value}× mult`;
-  if (effect.kind === "mult") return `×${value} mult`;
+  const multValue = Number(value.toFixed(2));
+  if (effect.kind === "chips-add") return `+${Math.round(value).toLocaleString()} chips`;
+  if (effect.kind === "mult-add") return `+${multValue}× mult`;
+  if (effect.kind === "mult") return `×${multValue} mult`;
   return `+${value}`;
 }
 
@@ -2210,7 +2214,8 @@ function jokerValueLabel(joker) {
   const value = Number(joker.value);
   if (!Number.isFinite(value)) return "—";
   if (joker.effectKind === "mult") return `×${Number(value.toFixed(2))}`;
-  return `+${value.toLocaleString()}`;
+  if (joker.effectKind === "mult-add") return `+${Number(value.toFixed(2))}×`;
+  return `+${Math.round(value).toLocaleString()}`;
 }
 
 function showJokerDetail(joker, owned) {

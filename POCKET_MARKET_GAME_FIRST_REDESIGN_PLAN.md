@@ -1,7 +1,7 @@
 # Pocket Market — game-first redesign plan
 
-Status: **Phase 1 complete. Phase 2 not started.**
-Last updated: 2026-11-24
+Status: **Phases 1–4 complete. Phase 5 not started.**
+Last updated: 2026-11-25
 
 This document tracks the game-first redesign brief separately from
 `POCKET_MARKET_IMPLEMENTATION_PLAN.md`, which remains the historical roguelike implementation
@@ -184,7 +184,7 @@ placement/run duration.
 | 2e — Version bump, CHANGELOG, global update dialog | **Complete** | Added `VERSION` constant and `CHANGELOG.md`. Added a quickly dismissable global update dialog that shows the latest changelog when the shipped version changes; acknowledged version stored in `localStorage`. Cache-bust bumped to `?v=2026-11-25-update-dialog`. Verified: syntax, 51/51 browser flow checks, 4/4 responsive layout audits. |
 | 2f — Joker preview activation | **Complete** | Owned Jokers lighting up in the market rail when they contribute to the live preview, with per-Joker value badges, a contribution strip beneath the HUD, a short lift + existing joker cue when a trade makes one newly relevant, and display-only mirroring of Worker triggers. Server remains authoritative for locked scores. Verified: syntax, 55/55 browser flow checks, 4/4 responsive layout audits. |
 | 3 — Rebuild trading terminal | **Complete** | Object-based board focus, game-first menu hierarchy, subordinate supporting panels, fill feedback, and distinct counter/tally-sheet/challenge-card compositions for Shop/Results/Boss. Market/trade APIs and run HUD behaviour unchanged. Verified: syntax, 65/65 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 71/71 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
+| 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 72/72 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 5 — Redesign menu, results, settings, leaderboard | Not started | Settings screen is currently absent; add only as a real functional screen or record as out of scope. |
 | 6 — Mobile and accessibility | Not started | 44px touch targets, keyboard focus, semantic controls, reduced motion. |
 | 7 — Regression, multiplayer, deployment testing | Not started | Include Worker tests, mock-browser QC, responsive audits, production checks. |
@@ -245,9 +245,14 @@ CSS draws the matching badge on the card object so a disabled offer explains its
 adds a two-digit step number and a Joker source name to each effect row, and `.boss-detail::before`
 adds a small Rule label. No score, price, currency, shop inventory, run, or authority logic changed.
 
-Verified: syntax, 71/71 browser flow checks (six added assertions for content states and labels),
-4/4 floor layout audits, 12/12 Shop/Results/Boss responsive audits, screenshots including the new
-post-purchase shop state. No Worker change or deploy.
+Verified: syntax, 72/72 browser flow checks (seven added assertions for content states, labels, and
+binary-float preview formatting), 4/4 floor layout audits, 12/12 Shop/Results/Boss responsive audits,
+screenshots including the new post-purchase shop state. No Worker change or deploy.
+
+Hotfix 2026-11-25.8: preview-only multiplier values are rounded to two decimals before they reach a
+label, and `jokerContributionLabel` / `jokerValueLabel` format defensively. A three-round Diamond Hands
+streak now reads `+0.9× mult` instead of exposing `0.8999999999999999`. The server still owns the
+locked score; only display formatting changed.
 
 ## Next milestone
 
