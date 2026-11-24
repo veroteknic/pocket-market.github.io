@@ -1,6 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
+const VERSION = "2026-11-25";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -115,6 +116,27 @@ function shake(target, intensity = "sm") {
   el.classList.add(`shake-${intensity}`);
   clearTimeout(shakeCleanup);
   shakeCleanup = setTimeout(() => el.classList.remove("shake-sm", "shake-md", "shake-lg"), 400);
+}
+
+// Global update dialog: shows the latest changelog when the shipped version
+// changes. Quickly dismissable; remembers the acknowledged version in localStorage.
+const seenVersion = localStorage.getItem("pocket-market-seen-version");
+let updateDialogShown = false;
+
+function showUpdateDialog() {
+  if (updateDialogShown || seenVersion === VERSION) return;
+  const dialog = $("update-dialog");
+  if (!dialog) return;
+  updateDialogShown = true;
+  dialog.hidden = false;
+}
+
+function dismissUpdateDialog() {
+  const dialog = $("update-dialog");
+  if (dialog) dialog.hidden = true;
+  localStorage.setItem("pocket-market-seen-version", VERSION);
+  seenVersion = VERSION;
+  updateDialogShown = false;
 }
 
 // One-shot event punctuation: a short chromatic bloom on the news panel and on
@@ -2563,6 +2585,7 @@ $("name-form").addEventListener("submit", event => {
   event.preventDefault();
   claimName($("name-input").value.trim(), $("password-input").value);
 });
+showUpdateDialog();
 try {
   newGame();
   renderMenu();
@@ -2600,6 +2623,9 @@ window.addEventListener("error", event => {
 });
 
 if (savedPlayerName) $("name-input").value = savedPlayerName;
+
+$("update-dismiss").addEventListener("click", dismissUpdateDialog);
+$("update-continue").addEventListener("click", dismissUpdateDialog);
 
 async function claimName(name, password) {
   try {

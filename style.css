@@ -3179,3 +3179,66 @@ body.dev-open { padding-right: 410px; }
   .market-joker-card:focus-visible,
   .screen-floor .market-table tbody tr:hover { transform: none !important; }
 }
+
+/* ---------- Global update dialog ----------
+
+   Dismissable card that shows the latest changelog when the shipped version
+   changes. Quick to dismiss; does not block the page once acknowledged. */
+
+.update-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 17, 14, 0.85);
+}
+.update-card {
+  width: min(460px, 92vw);
+  padding: 24px 26px 22px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 24px 48px var(--surface-shadow);
+  position: relative;
+}
+.update-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: 0;
+  color: var(--faint);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.update-close:hover { color: var(--ink); }
+.update-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.update-title {
+  margin: 0;
+  font: 600 20px/1.1 var(--display);
+  letter-spacing: -0.02em;
+}
+.update-list {
+  margin: 0 0 18px;
+  padding-left: 18px;
+  color: var(--muted);
+  font: 12px/1.55 var(--sans);
+}
+.update-list li { margin-bottom: 6px; }
+.update-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-card { animation: none !important; }
+}
