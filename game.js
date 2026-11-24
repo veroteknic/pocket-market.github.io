@@ -2305,12 +2305,8 @@ async function advanceRunRound() {
     applyRunAccount();
     if (runState.phase === "results") {
       await navigate("results");
-    } else if (runState.round === runRules.roundsPerAnte) {
-      await navigate("boss");
-    } else if (runState.round === 1 && runState.ante > 1) {
-      await navigate("ante-complete");
     } else {
-      await navigate("floor");
+      await navigate("shop");
     }
   } catch (error) {
     $("score-verdict").textContent = error instanceof Error ? error.message : "Advance failed.";
@@ -2463,7 +2459,13 @@ $("results-new-run").addEventListener("click", startRun);
 $("results-classic").addEventListener("click", () => navigate("floor"));
 $("results-menu").addEventListener("click", () => navigate("menu"));
 $("collection-back").addEventListener("click", () => navigate("menu"));
-$("shop-back").addEventListener("click", () => navigate("menu"));
+$("shop-back").addEventListener("click", async () => {
+  if (!runState) { await navigate("menu"); return; }
+  if (runState.phase === "results") { await navigate("results"); return; }
+  if (runState.round === runRules.roundsPerAnte) { await navigate("boss"); return; }
+  if (runState.round === 1 && runState.ante > 1) { await navigate("ante-complete"); return; }
+  await navigate("floor");
+});
 $("boss-back").addEventListener("click", () => navigate("menu"));
 $("boss-start").addEventListener("click", async () => {
   proceedToFloorAfterBoss = true;
