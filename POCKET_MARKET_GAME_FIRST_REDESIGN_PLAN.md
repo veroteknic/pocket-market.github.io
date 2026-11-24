@@ -183,7 +183,7 @@ placement/run duration.
 | 2d — Subtle element-only shake | **Complete** | Screenshake targets the affected element only (company row on trade, news panel on market event, score total on round clear), never the whole screen. Magnitudes reduced to tiny translations/barely-there rotation so it reads as a tactile button reaction. Verified: syntax, 51/51 browser flow checks, 4/4 responsive layout audits. |
 | 2e — Version bump, CHANGELOG, global update dialog | **Complete** | Added `VERSION` constant and `CHANGELOG.md`. Added a quickly dismissable global update dialog that shows the latest changelog when the shipped version changes; acknowledged version stored in `localStorage`. Cache-bust bumped to `?v=2026-11-25-update-dialog`. Verified: syntax, 51/51 browser flow checks, 4/4 responsive layout audits. |
 | 2f — Joker preview activation | **Complete** | Owned Jokers lighting up in the market rail when they contribute to the live preview, with per-Joker value badges, a contribution strip beneath the HUD, a short lift + existing joker cue when a trade makes one newly relevant, and display-only mirroring of Worker triggers. Server remains authoritative for locked scores. Verified: syntax, 55/55 browser flow checks, 4/4 responsive layout audits. |
-| 3 — Rebuild trading terminal | **In progress** | Object-based board focus added: clicking a security highlights it with a brass edge and drives the price tape from one shared selection. Menu now leads with one dominant action plus a compact secondary cluster; dispatches/leaderboard are visually subordinate; fills light up the newly held row and survive tick redraws. Market/trade APIs and run HUD behaviour unchanged. Verified: syntax, 62/62 browser flow checks, 4/4 responsive layout audits. Remaining: per-screen identity for shop/results/boss. |
+| 3 — Rebuild trading terminal | **Complete** | Object-based board focus, game-first menu hierarchy, subordinate supporting panels, fill feedback, and distinct counter/tally-sheet/challenge-card compositions for Shop/Results/Boss. Market/trade APIs and run HUD behaviour unchanged. Verified: syntax, 65/65 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 4 — Redesign Jokers, shop, scoring, boss screens | Not started | Do not invent new Joker mechanics. |
 | 5 — Redesign menu, results, settings, leaderboard | Not started | Settings screen is currently absent; add only as a real functional screen or record as out of scope. |
 | 6 — Mobile and accessibility | Not started | 44px touch targets, keyboard focus, semantic controls, reduced motion. |
@@ -208,7 +208,7 @@ Reviewed against the Balatro-inspired design brief (principles only, no copied a
 
 - **Resolved in 2f/3:** Jokers were passive information; they now light up and sound when they affect the preview. The board had no focus concept; selecting a security now drives the tape and gives that row a brass edge. Redundant captions and the last flavourtext label are gone.
 - **Resolved in 3a:** the menu leads with one dominant Start/Continue action and a compact secondary grid; dispatches and the leaderboard use subordinate typography; a fill lights up the newly held row and the marker survives tick redraws. All existing control IDs and the classic-board escape hatch remain.
-- **Remaining — screen identity:** shop/results/boss have distinct markup but still share a header-heavy layout. Needs per-screen composition, not a generic panel template.
+- **Resolved in 3b:** Shop is a counter with a currency plaque, Results is a tally sheet with the score as a bordered object, and Boss is a framed challenge card with a glyph object. No screen relies on a generic header-plus-panel template.
 - **Not in scope:** new gameplay, backend changes, settings/achievements invented as placeholders.
 
 ## Phase 3a record — 2026-11-25
@@ -223,8 +223,20 @@ fill animation and shake. No scoring, trading, shop, run, or authority logic cha
 Verified: syntax, 62/62 browser flow checks, 4/4 responsive layout audits, screenshots captured
 (menu, floor, score, shop, jokers, portfolio, mobile).
 
+## Phase 3b record — 2026-11-25
+
+CSS-only screen-identity pass. `.shop-head` is now a three-column grid with a brass-bordered currency
+plaque; it collapses to a two-row grid on small screens. `.results-head` places the title and the
+final score in separate grid areas, with the score carrying a brass edge; it stacks on mobile.
+`.boss-card` is a framed object with an inset rule and a dedicated glyph square. No markup, game
+logic, API call, run flow, or backend behaviour changed.
+
+Verified: syntax, 65/65 browser flow checks (added per-screen composition assertions), 4/4 floor
+layout audits, 12/12 Shop/Results/Boss responsive audits (`pm-qc/screens.mjs`), screenshots captured
+including results and boss.
+
 ## Next milestone
 
-Phase 3: restructure the existing trading floor into one cohesive terminal composition (company cards,
-ledger, HUD) as a single game environment without changing server authority, market API, or WebSocket
-behaviour. Keep the scoring → shop → market run flow intact.
+Phase 4: deepen the Joker/Shop/Scoring/Boss screen content without inventing new mechanics, keeping
+the server authoritative for scores, shop inventory, purchases, and run progression. No Worker change
+or deploy without explicit authorization.

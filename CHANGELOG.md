@@ -1,5 +1,12 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.6 — Screen identity pass
+
+- Shop now reads as a counter: centred title, an exit, and a brass currency plaque holding credits and reroll.
+- Results now reads as a tally sheet: the final score is a bordered object beside the run title instead of another heading.
+- Boss rounds now have a single framed challenge card with a dedicated glyph object, distinct from a content panel.
+- Added a dedicated responsive audit for Shop, Results and Boss at 1440/1024/768/390 px.
+
 ## 2026-11-25.5 — Game-first menu and fill feedback
 
 - The main menu now has one dominant Start/Continue action with a compact grid of secondary controls, instead of a flat list of links.
