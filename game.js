@@ -1276,8 +1276,6 @@ function renderRunStrip() {
 
 function renderMenu() {
   const summary = $("menu-summary");
-  const rules = $("menu-rules");
-  const line = $("menu-run-line");
   const resultsButton = $("menu-results");
   const classicButton = $("menu-classic");
   const collectionButton = $("menu-collection");
@@ -1285,12 +1283,8 @@ function renderMenu() {
   const statsButton = $("menu-stats");
   const primary = $("menu-primary");
   const label = $("menu-primary-label");
-  const note = $("menu-primary-note");
 
-  rules.textContent = `${runRules.antes} antes · ${runRules.roundsPerAnte} rounds per ante · $${money(runRules.startingCash)} bankroll`;
   summary.hidden = true;
-  line.hidden = true;
-  rules.hidden = false;
   resultsButton.hidden = true;
   classicButton.hidden = false;
   collectionButton.hidden = false;
@@ -1303,14 +1297,12 @@ function renderMenu() {
 
   if (!runState) {
     label.textContent = "Start run";
-    note.textContent = `$${money(runRules.startingCash)} bankroll`;
     primary.dataset.action = "start";
     return;
   }
 
   if (runState.phase === "trading" || runState.phase === "scoring") {
     summary.hidden = false;
-    rules.hidden = true;
     $("menu-ante").textContent = `${runState.ante} / ${runRules.antes}`;
     $("menu-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;
     $("menu-target").textContent = Number(runState.target).toLocaleString();
@@ -1318,20 +1310,15 @@ function renderMenu() {
     classicButton.hidden = true;
     if (runState.phase === "trading") {
       label.textContent = "Continue run";
-      note.textContent = `Round ${runState.round} · target ${runState.target}`;
       primary.dataset.action = "continue";
     } else {
       label.textContent = "View scoring";
-      note.textContent = `Round score ${Number(runState.lastRoundScore || 0).toLocaleString()}`;
       primary.dataset.action = "scoring";
     }
     return;
   }
 
-  line.hidden = false;
-  line.textContent = `Score ${Number(runState.scoreTotal || 0).toLocaleString()} · best round ${Number(runState.bestRoundScore || 0).toLocaleString()} · ante ${runState.ante} round ${runState.round}`;
   label.textContent = "Start new run";
-  note.textContent = `Best round ${Number(runState.bestRoundScore || 0).toLocaleString()}`;
   primary.dataset.action = "start";
   resultsButton.hidden = false;
   classicButton.hidden = false;
@@ -1602,17 +1589,13 @@ function renderRunSetupScreen() {
   const bankroll = $("setup-bankroll");
   const target = $("setup-target");
   const jokerCount = $("setup-joker-count");
-  const desc = $("setup-desc");
   const button = $("setup-start");
-  if (!bankroll || !target || !jokerCount || !desc || !button) return false;
+  if (!bankroll || !target || !jokerCount || !button) return false;
 
   bankroll.textContent = money(RUN_RULES.startingCash);
   target.textContent = Number(targetForRoundClient(1, 1)).toLocaleString();
   const owned = runState ? (runState.jokers || []).length : 0;
   jokerCount.textContent = String(owned);
-  desc.textContent = runState && runState.jokers && runState.jokers.length
-    ? `You own ${runState.jokers.length} joker${runState.jokers.length === 1 ? "" : "s"}. Lock when you're ready to score.`
-    : "Build your portfolio across three rounds. Lock when you're ready to score.";
   button.textContent = runState ? "Resume Run" : "Start Run";
   return true;
 }
@@ -1621,10 +1604,9 @@ function renderRoundIntroScreen() {
   const roundEl = $("intro-round");
   const anteEl = $("intro-ante");
   const targetEl = $("intro-target");
-  const desc = $("intro-desc");
   const modifiers = $("intro-modifiers");
   const button = $("intro-start");
-  if (!roundEl || !anteEl || !targetEl || !desc || !modifiers || !button) return false;
+  if (!roundEl || !anteEl || !targetEl || !modifiers || !button) return false;
 
   const ante = runState.ante;
   const round = runState.round;
@@ -1632,9 +1614,6 @@ function renderRoundIntroScreen() {
   roundEl.textContent = String(round);
   anteEl.textContent = `Ante ${ante}`;
   targetEl.textContent = target;
-  desc.textContent = round === runRules.roundsPerAnte
-    ? "Boss round — a special restriction applies. Lock when you're ready."
-    : "Trade freely, then lock your round to score.";
 
   modifiers.replaceChildren();
   const isBoss = round === runRules.roundsPerAnte;
@@ -1665,17 +1644,13 @@ function renderRoundIntroScreen() {
 
 function renderAnteCompleteScreen() {
   const numberEl = $("ante-complete-number");
-  const descEl = $("ante-complete-desc");
   const scoreEl = $("ante-complete-score");
   const roundsEl = $("ante-complete-rounds");
   const nextTargetEl = $("ante-complete-next-target");
   const button = $("ante-complete-continue");
-  if (!numberEl || !descEl || !scoreEl || !roundsEl || !nextTargetEl || !button) return false;
+  if (!numberEl || !scoreEl || !roundsEl || !nextTargetEl || !button) return false;
 
   numberEl.textContent = String(runState.ante);
-  descEl.textContent = runState.ante >= runRules.antes
-    ? "You've cleared every ante. The run is complete."
-    : "Ante cleared. The market resets for the next challenge.";
   scoreEl.textContent = Number(runState.scoreTotal || 0).toLocaleString();
   roundsEl.textContent = String(runRules.roundsPerAnte);
   const nextTarget = runState.ante >= runRules.antes
@@ -2150,7 +2125,7 @@ async function prepareFloor() {
   if (!runState) {
     floorMode = "classic";
     await loadClassicAccount();
-    $("floor-mode").textContent = floorMode === "run" ? "Run" : "Classic board";
+  
     return;
   }
   if (isRunTrading()) {
@@ -2160,7 +2135,7 @@ async function prepareFloor() {
     floorMode = "classic";
     await loadClassicAccount();
   }
-  $("floor-mode").textContent = floorMode === "run" ? "Run" : "Classic board";
+
 }
 
 async function navigate(name, { hash = true } = {}) {

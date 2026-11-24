@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-24-run-flow">
+  <link rel="stylesheet" href="style.css?v=2026-11-24-less-texty">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -39,12 +39,10 @@
           <div class="menu-stat"><dt>Target</dt><dd id="menu-target">120</dd></div>
           <div class="menu-stat"><dt>Score</dt><dd id="menu-score">0</dd></div>
         </dl>
-        <p id="menu-rules" class="menu-rules">8 antes · 3 rounds per ante · $10,000 bankroll</p>
         <p id="menu-run-line" class="menu-run-line" hidden>—</p>
         <nav class="menu-actions" aria-label="Game">
           <button id="menu-primary" class="menu-action primary" type="button">
             <span id="menu-primary-label">Start run</span>
-            <span id="menu-primary-note" class="menu-action-note">$10,000 bankroll</span>
           </button>
           <button id="menu-collection" class="menu-action" type="button">Collection</button>
           <button id="menu-shop" class="menu-action" type="button">Shop</button>
@@ -54,7 +52,6 @@
         </nav>
         <p id="menu-error" class="form-error" aria-live="polite"></p>
         <footer class="menu-footer">
-          <p>It aint money. Don't get too excited.</p>
           <button id="menu-sound" class="sound-toggle" type="button" aria-label="Sound" aria-pressed="true">Sound: on</button>
         </footer>
       </div>
@@ -64,7 +61,6 @@
       <header class="masthead">
         <div>
           <button id="floor-menu" class="wordmark" type="button">Pocket Market</button>
-          <p id="floor-mode" class="floor-mode">Classic board</p>
         </div>
         <nav class="game-tabs" aria-label="Run views">
           <button type="button" data-nav-screen="floor" class="is-current">Market</button>
@@ -205,7 +201,7 @@
     </div>
 
     <footer class="colophon">
-      <p>ITS NOT ACTUAL MONEY YOU BROKE BUM.</p>
+      <p class="colophon-note">Fake money. Not real trading.</p>
     </footer>
     </section>
 
@@ -458,7 +454,6 @@
               <strong id="setup-joker-count">0</strong>
             </div>
           </div>
-          <p class="setup-desc" id="setup-desc">Build your portfolio across three rounds. Lock when you're ready to score.</p>
         </div>
         <div class="setup-actions">
           <button id="setup-start" class="primary-action" type="button">Start Run</button>
@@ -477,7 +472,6 @@
             <span class="intro-target-label">Target Score</span>
             <strong id="intro-target">120</strong>
           </div>
-          <p id="intro-desc" class="intro-desc">Trade freely, then lock your round to score.</p>
           <div id="intro-modifiers" class="intro-modifiers"></div>
         </div>
         <div class="intro-actions">
@@ -490,7 +484,6 @@
       <div class="ante-shell">
         <header class="ante-head">
           <h2 class="ante-title">Ante <span id="ante-complete-number">1</span> Complete</h2>
-          <p id="ante-complete-desc" class="ante-complete-desc">You've cleared the ante. Prepare for the next challenge.</p>
         </header>
         <div class="ante-card">
           <div class="ante-stats">
@@ -518,7 +511,6 @@
       <div class="victory-shell">
         <header class="victory-head">
           <h2 class="victory-title">Run Complete</h2>
-          <p class="victory-subtitle">You conquered all eight antes.</p>
         </header>
         <div class="victory-card">
           <div class="victory-stats">
@@ -684,6 +676,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-24-run-flow"></script>
+  <script src="game.js?v=2026-11-24-less-texty"></script>
 </body>
 </html>
