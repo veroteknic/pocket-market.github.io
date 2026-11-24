@@ -177,15 +177,28 @@ placement/run duration.
 | Phase | State | Notes |
 | --- | --- | --- |
 | 1 — Audit and preservation checklist | **Complete** | This document. |
-| 2 — Design tokens, typography, surfaces, animation system | Not started | Apply the specified palette and square/minimal-surface language without breaking existing screens. |
+| 2 — Design tokens, typography, surfaces, animation system | **In progress** | Palette, radius, motion and surface tokens applied; reusable terminal animation primitives added. Needs visual and regression verification before completion. |
 | 3 — Rebuild trading terminal | Not started | Keep all existing market/trade APIs and run HUD behaviour. |
 | 4 — Redesign Jokers, shop, scoring, boss screens | Not started | Do not invent new Joker mechanics. |
 | 5 — Redesign menu, results, settings, leaderboard | Not started | Settings screen is currently absent; add only as a real functional screen or record as out of scope. |
 | 6 — Mobile and accessibility | Not started | 44px touch targets, keyboard focus, semantic controls, reduced motion. |
 | 7 — Regression, multiplayer, deployment testing | Not started | Include Worker tests, mock-browser QC, responsive audits, production checks. |
 
+## Phase 2 record — 2026-11-24
+
+Applied the specified terminal palette as root tokens (`#171916`, `#292D26`, `#E9E1CE`, `#D49B48`,
+`#78A77B`, `#C76A60`, `#85877C`). Existing font stacks already provide editorial serif display,
+sans UI and monospaced financial type; tabular numerals remain on numeric fields. Added radius,
+motion-duration, easing and reusable `terminal-enter` / `terminal-pulse` / `terminal-sweep`
+primitives with reduced-motion guards. Converted visible surface radii to the new tokens and removed
+generic gradients from HUD blocks, score reveal lines, joker art backdrops and market rows. Rarity
+edges now use flat, distinguishable terminal colours. No markup, game logic, API call or backend
+behaviour changed in this pass.
+
+Verification is required before marking Phase 2 complete.
+
 ## Next milestone
 
-Phase 2: establish the terminal design tokens, typography, square/minimal surfaces, and reusable
-animation primitives. The first Phase 2 pass should be token-level and reversible, followed by
-screenshot/DOM checks before any structural terminal rebuild.
+Finish Phase 2 verification: run syntax, browser flow, responsive layout and screenshot checks. If
+clean, push with a new cache-bust and verify production. Then begin Phase 3 by restructuring the
+existing trading floor into one cohesive terminal composition without changing server authority.
