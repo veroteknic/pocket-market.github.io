@@ -4,6 +4,10 @@ Status: **Phases 0–8 implemented; Phase 8 arcade playfield polish complete. Ph
 Last updated: 2026-11-23
 Source specification: `AGENTS.md`, section “MY SECTION”.
 
+The separate game-first redesign brief is tracked in
+`POCKET_MARKET_GAME_FIRST_REDESIGN_PLAN.md`. Its Phase 1 preservation checklist supersedes stale
+claims in this historical plan where they conflict with shipped code.
+
 This document is the working plan required by the specification. It records what exists
 today, what the roguelike architecture will be, how the existing game will be migrated
 safely, and the order of work. It should be updated at the end of every milestone.
