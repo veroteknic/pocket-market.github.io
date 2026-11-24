@@ -177,7 +177,8 @@ placement/run duration.
 | Phase | State | Notes |
 | --- | --- | --- |
 | 1 — Audit and preservation checklist | **Complete** | This document. |
-| 2 — Design tokens, typography, surfaces, animation system | **Complete** | Specified terminal palette applied as root tokens; radius/motion/easing tokens added; reusable terminal-enter/pulse/sweep primitives with reduced-motion guards; visible surface radii converted; generic gradients removed from HUD/score/joker/market surfaces; flat distinguishable rarity colours. Verified: syntax, 48/48 browser flow checks, 4/4 responsive layout audits, 17/17 production checks. |
+| 2 — Design tokens, typography, surfaces, animation system | **Complete** | Specified terminal palette applied as root tokens; radius/motion/easing tokens added; reusable terminal-enter/pulse/sweep primitives with reduced-motion guards; visible surface radii converted; generic gradients removed from HUD/score/joker/market surfaces; flat distinguishable rarity colours. |
+| 2b — Run flow: scoring → shop → market | **Complete** | After scoring a round, the player flows into the Shop screen instead of jumping to floor/menu. Shop-back returns to the next run screen (floor, boss intro, ante-complete, or results) based on runState. No menu detour between scoring, shopping, and the next market round. Verified: syntax, 51/51 browser flow checks, 4/4 responsive layout audits, 17/17 production checks. |
 | 3 — Rebuild trading terminal | Not started | Keep all existing market/trade APIs and run HUD behaviour. |
 | 4 — Redesign Jokers, shop, scoring, boss screens | Not started | Do not invent new Joker mechanics. |
 | 5 — Redesign menu, results, settings, leaderboard | Not started | Settings screen is currently absent; add only as a real functional screen or record as out of scope. |
@@ -195,10 +196,10 @@ generic gradients from HUD blocks, score reveal lines, joker art backdrops and m
 edges now use flat, distinguishable terminal colours. No markup, game logic, API call or backend
 behaviour changed in this pass.
 
-Verification is required before marking Phase 2 complete.
+Verified: syntax, 51/51 browser flow checks, 4/4 responsive layout audits, 17/17 production checks.
 
 ## Next milestone
 
-Finish Phase 2 verification: run syntax, browser flow, responsive layout and screenshot checks. If
-clean, push with a new cache-bust and verify production. Then begin Phase 3 by restructuring the
-existing trading floor into one cohesive terminal composition without changing server authority.
+Phase 3: restructure the existing trading floor into one cohesive terminal composition (company cards,
+ledger, HUD) as a single game environment without changing server authority, market API, or WebSocket
+behaviour. Keep the scoring → shop → market run flow intact.
