@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.4";
+const VERSION = "2026-11-25.5";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -86,6 +86,8 @@ let marketHistory = {};
 const savedChartRange = localStorage.getItem("pocket-market-chart-range");
 let chartRange = ["day", "week", "all"].includes(savedChartRange) ? savedChartRange : "day";
 let pendingTrade = null;
+let filledMarker = { ticker: "", until: 0 };
+let fillMarkerCleanup = 0;
 let lastEventKey = "";
 let playerStats = { costBasis: {}, realizedProfit: 0 };
 const hudValues = new Map();
@@ -108,14 +110,20 @@ $("dev-crt").addEventListener("click", () => applyCrt(document.body.dataset.crt 
 // the OS asks for reduced motion.
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let shakeCleanup = 0;
+let shakeTarget = null;
 function shake(target, intensity = "sm") {
   if (reducedMotion.matches) return;
   const el = target || document.querySelector("main");
+  if (shakeTarget && shakeTarget !== el) shakeTarget.classList.remove("shake-sm", "shake-md", "shake-lg");
+  shakeTarget = el;
   el.classList.remove("shake-sm", "shake-md", "shake-lg");
   void el.offsetWidth;
   el.classList.add(`shake-${intensity}`);
   clearTimeout(shakeCleanup);
-  shakeCleanup = setTimeout(() => el.classList.remove("shake-sm", "shake-md", "shake-lg"), 400);
+  shakeCleanup = setTimeout(() => {
+    el.classList.remove("shake-sm", "shake-md", "shake-lg");
+    if (shakeTarget === el) shakeTarget = null;
+  }, 400);
 }
 
 // Global update dialog: shows the latest changelog when the shipped version
@@ -702,6 +710,14 @@ function selectSecurity(ticker) {
   applySecuritySelection();
 }
 
+// Fill feedback lives past a table redraw so a real market tick cannot erase
+// the visual consequence of an order that just landed.
+function applyFillMarker() {
+  if (!filledMarker.ticker || Date.now() >= filledMarker.until) return;
+  const row = document.querySelector(`#market tr[data-ticker="${filledMarker.ticker}"]`);
+  if (row) row.classList.add("is-filled");
+}
+
 function render() {
   $("day").textContent = state.day;
   const portfolio = portfolioValue();
@@ -724,6 +740,7 @@ function render() {
       </td>
     </tr>`).join("");
   applySecuritySelection();
+  applyFillMarker();
   drawChart();
   renderRunStrip();
   if (activeScreen === "portfolio") renderPortfolioScreen();
@@ -991,6 +1008,8 @@ async function trade(index, action) {
   setMessage(`${action === "buy" ? "Buying" : "Selling"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name}…`);
   render();
 
+  let filledTicker = "";
+  let filledHeavy = false;
   const realizedBefore = playerStats.realizedProfit;
   try {
     const response = await fetch(`${BACKEND_HTTP_URL}/api/trade`, {
@@ -1024,10 +1043,10 @@ async function trade(index, action) {
     }
     const realizedGain = (result.player.realizedProfit || 0) - realizedBefore;
     const heavy = Math.abs(result.impact || 0) >= 0.035 || Math.abs(realizedGain) >= 250;
-    const row = document.querySelector(`#market tr[data-ticker="${company.ticker}"]`);
-    if (row) shake(row, heavy ? "md" : "sm");
     cue(action === "buy" ? "buy" : "sell");
     if (heavy) cue("fill");
+    filledTicker = company.ticker;
+    filledHeavy = heavy;
     const slipped = Number.isFinite(result.marketPrice) && result.marketPrice !== result.price;
     setMessage(`${action === "buy" ? "Bought" : "Sold"} ${amount} share${amount === 1 ? "" : "s"} of ${company.name} at $${money(result.price)}${slipped ? ` · tape moved to $${money(result.marketPrice)}` : ""}.`);
   } catch {
@@ -1036,6 +1055,20 @@ async function trade(index, action) {
   } finally {
     pendingTrade = null;
     render();
+    // The fill is a game event: light up the newly held position on the board
+    // after the table redraw so the consequence is actually visible.
+    document.querySelectorAll("#market tr.is-filled").forEach(row => row.classList.remove("is-filled"));
+    clearTimeout(fillMarkerCleanup);
+    filledMarker = { ticker: filledTicker, until: filledTicker ? Date.now() + 900 : 0 };
+    applyFillMarker();
+    if (filledTicker) {
+      const filledRow = document.querySelector(`#market tr[data-ticker="${filledTicker}"]`);
+      if (filledRow) shake(filledRow, filledHeavy ? "md" : "sm");
+      fillMarkerCleanup = setTimeout(() => {
+        document.querySelectorAll("#market tr.is-filled").forEach(row => row.classList.remove("is-filled"));
+        filledMarker = { ticker: "", until: 0 };
+      }, 900);
+    }
     flashJokerContributions(contributingBefore, previewJokerContributions());
   }
 }

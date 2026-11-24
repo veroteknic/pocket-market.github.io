@@ -506,16 +506,23 @@ button.tap { animation: button-pop 160ms ease-out; }
 
 /* ---------- Dispatches and leaderboard ---------- */
 
+/* Supporting intelligence stays readable but never competes with the board. */
 .lower-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  margin-top: 38px;
-  border-top: 1px solid var(--line-bright);
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
 }
-.lower-grid section { margin: 0; padding-top: 22px; }
+.lower-grid section { margin: 0; padding-top: 18px; }
 .news-column { padding-right: 32px; border-right: 1px solid var(--line); }
 .board-column { padding-left: 32px; }
-.lower-grid h2 { margin-bottom: 14px; }
+.lower-grid h2 {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font: 600 10.5px/1.2 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
 
 .featured-news {
   margin: 0 0 16px;
@@ -701,7 +708,9 @@ button.tap { animation: button-pop 160ms ease-out; }
   color: var(--muted);
   font: 11px/1.6 var(--mono);
 }
-.menu-actions { display: flex; flex-direction: column; gap: 10px; max-width: 440px; margin-top: 28px; }
+/* One dominant action, then a compact control cluster. The menu should read
+   like a game title screen, not a list of website links. */
+.menu-actions { display: flex; flex-direction: column; gap: 10px; max-width: 520px; margin-top: 28px; }
 .menu-action {
   display: flex;
   flex-direction: column;
@@ -713,6 +722,16 @@ button.tap { animation: button-pop 160ms ease-out; }
   text-align: left;
   font-size: 12px;
   letter-spacing: 0.1em;
+}
+.menu-actions .menu-primary { padding: 20px 24px; font-size: 15px; letter-spacing: 0.14em; }
+.menu-secondary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.menu-secondary .menu-action {
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 14px;
+  font-size: 10.5px;
+  text-align: center;
 }
 .menu-action:hover { border-color: var(--brass); background: rgba(212, 155, 72, 0.09); }
 .menu-action.primary,
@@ -1249,6 +1268,15 @@ body.dev-open { padding-right: 410px; }
 }
 .price-up { animation: price-flash-up 700ms ease-out; }
 .price-down { animation: price-flash-down 700ms ease-out; }
+
+/* A filled order marks the position as an object that just entered play.
+   Outline and wash only — the row's own shake animation owns transform. */
+@keyframes position-fill {
+  0% { background: rgba(212, 155, 72, 0.22); box-shadow: inset 3px 0 0 var(--brass); }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+.market-table tbody tr.is-filled { animation: position-fill 900ms ease-out both; }
+
 @keyframes number-roll {
   0% { color: var(--gold); }
   100% { color: inherit; }
@@ -1376,6 +1404,8 @@ body.dev-open { padding-right: 410px; }
   .menu-stat:nth-child(3) { padding-left: 0; border-left: 0; }
   .menu-actions { max-width: none; }
   .menu-action { padding: 14px 16px; }
+  .menu-actions .menu-primary { padding: 16px; font-size: 14px; }
+  .menu-secondary .menu-action { padding: 12px; }
   .score-shell,
   .results-shell { padding-top: 6px; }
   .score-head { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -1403,7 +1433,8 @@ body.dev-open { padding-right: 410px; }
   button, #tick-fill { transition: none; }
   button:hover, button:active { transform: none; }
   .shake-sm, .shake-md, .shake-lg, button.tap, .number-roll,
-  .price-up, .price-down, .event-flash, .featured-news.event-flash,
+  .price-up, .price-down, .market-table tbody tr.is-filled,
+  .event-flash, .featured-news.event-flash,
   .tick-strip.urgent #tick-count, .screen { animation: none !important; }
   .score-effect.revealed, #score-meter-fill { transition: none; }
 }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-25-dialog-fix">
+  <link rel="stylesheet" href="style.css?v=2026-11-25-screen-composition">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -34,6 +34,8 @@
       <button id="update-dismiss" class="update-close" type="button" aria-label="Dismiss">✕</button>
     </header>
     <ul class="update-list">
+      <li>Fills light up your position on the board</li>
+      <li>Menu now leads with one main action</li>
       <li>Fixed the update dialog so dismissing it sticks</li>
       <li>Select a security on the board to bring its tape into focus</li>
       <li>Jokers light up and chime when they contribute to your preview score</li>
@@ -61,14 +63,16 @@
         </dl>
         <p id="menu-run-line" class="menu-run-line" hidden>—</p>
         <nav class="menu-actions" aria-label="Game">
-          <button id="menu-primary" class="menu-action primary" type="button">
+          <button id="menu-primary" class="menu-action primary menu-primary" type="button">
             <span id="menu-primary-label">Start run</span>
           </button>
-          <button id="menu-collection" class="menu-action" type="button">Collection</button>
-          <button id="menu-shop" class="menu-action" type="button">Shop</button>
-          <button id="menu-stats" class="menu-action" type="button">Stats</button>
-          <button id="menu-results" class="menu-action" type="button" hidden>View results</button>
-          <button id="menu-classic" class="menu-action" type="button">Classic board</button>
+          <div class="menu-secondary">
+            <button id="menu-collection" class="menu-action" type="button">Collection</button>
+            <button id="menu-shop" class="menu-action" type="button">Shop</button>
+            <button id="menu-stats" class="menu-action" type="button">Stats</button>
+            <button id="menu-results" class="menu-action" type="button" hidden>View results</button>
+            <button id="menu-classic" class="menu-action" type="button">Classic board</button>
+          </div>
         </nav>
         <p id="menu-error" class="form-error" aria-live="polite"></p>
         <footer class="menu-footer">
@@ -699,6 +703,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-25-dialog-fix"></script>
+  <script src="game.js?v=2026-11-25-screen-composition"></script>
 </body>
 </html>

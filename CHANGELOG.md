@@ -1,5 +1,11 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.5 — Game-first menu and fill feedback
+
+- The main menu now has one dominant Start/Continue action with a compact grid of secondary controls, instead of a flat list of links.
+- Dispatches and the daily leaderboard are visually subordinate to the board so the trading floor reads as one game screen with supporting information.
+- A filled order now lights up its board row after the table redraw and survives market ticks; impact shake targets the redrawn row. Reduced-motion preferences still disable the effect.
+
 ## 2026-11-25.4 — Update dialog fix
 
 - Fixed a bug where dismissing the update dialog threw an error and failed to remember the version, causing the dialog to reappear on every load.
