@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-25-update-dialog">
+  <link rel="stylesheet" href="style.css?v=2026-11-25-joker-preview">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -34,6 +34,7 @@
       <button id="update-dismiss" class="update-close" type="button" aria-label="Dismiss">✕</button>
     </header>
     <ul class="update-list">
+      <li>Jokers light up and chime when they contribute to your preview score</li>
       <li>Run now flows Market → Scoring → Shop → Market</li>
       <li>Subtle element-only shake instead of whole-screen shake</li>
       <li>Cleaner UI — less flavourtext, more buttons</li>
@@ -115,6 +116,11 @@
           <strong id="floor-preview-target">—</strong>
           <span class="hud-target-bar"><i id="floor-preview-bar"></i></span>
         </div>
+      </div>
+
+      <div id="floor-joker-contrib" class="floor-joker-contrib" hidden>
+        <span class="floor-joker-label">Jokers</span>
+        <div id="floor-joker-list" class="floor-joker-list"></div>
       </div>
 
       <div id="market-joker-rail" class="market-joker-rail" hidden>
@@ -693,6 +699,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-25-update-dialog"></script>
+  <script src="game.js?v=2026-11-25-joker-preview"></script>
 </body>
 </html>

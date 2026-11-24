@@ -2783,6 +2783,98 @@ body.dev-open { padding-right: 410px; }
 .hud-target.is-pass > span:first-child { color: var(--green); }
 .hud-target.is-pass .hud-target-bar i { background: var(--green); }
 
+/* ---------- Floor Joker preview ----------
+
+   Shows which owned Jokers would fire on lock and how much each contributes
+   to the chips × mult preview. Mirrors Balatro's joker activation: a small
+   chip per contributing Joker, and the market rail card lights up in sync. */
+
+.floor-joker-contrib {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  min-width: 0;
+}
+.floor-joker-contrib.hidden { display: none !important; }
+.floor-joker-label {
+  color: var(--faint);
+  font: 600 8px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.floor-joker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.floor-joker-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: #17130e;
+  color: var(--ink);
+  font: 600 8.5px/1.2 var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 100ms ease, border-color 100ms ease, box-shadow 100ms ease;
+}
+.floor-joker-chip.is-active {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 1px rgba(212, 155, 72, 0.3), 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+.floor-joker-chip .floor-joker-name {
+  font-size: 8px;
+  opacity: 0.75;
+}
+.floor-joker-chip .floor-joker-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Market rail card that is contributing to the current preview. */
+.market-joker-card.is-contributing {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 1px rgba(212, 155, 72, 0.3), 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+.market-joker-card.is-contributing .market-joker-art {
+  outline: 1px solid var(--brass);
+  outline-offset: -1px;
+}
+.market-joker-contrib-badge {
+  display: block;
+  margin-top: 4px;
+  padding: 2px 4px;
+  border: 1px solid var(--brass);
+  border-radius: var(--radius);
+  background: rgba(212, 155, 72, 0.12);
+  color: var(--brass);
+  font: 600 8px/1.2 var(--mono);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A Joker newly contributing after a trade: a short tactile lift, not a shake. */
+@keyframes joker-fires {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+.market-joker-card.joker-fires { animation: joker-fires 520ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .market-joker-card.joker-fires { animation: none !important; }
+}
+
 .score-breakdown .score-line {
   padding: 0;
   border: 0;

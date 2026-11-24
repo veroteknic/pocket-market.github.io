@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25";
+const VERSION = "2026-11-25.2";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -346,6 +346,223 @@ function previewRoundScore() {
   const chips = baseChips + 25 * held.length + 20 * rising;
   const mult = Math.round((1 + 0.25 * Math.min(4, held.length)) * 100) / 100;
   return { chips, mult, score: Math.round(chips * mult) };
+}
+
+// Display-only preview of what each owned Joker would contribute to the
+// current round score. Runs in the browser; the server remains authoritative
+// for the final locked score. Mirrors the Worker's Joker effect engine.
+function marketDirectionClient(pricesEnd, pricesStart) {
+  const tickers = Object.keys(pricesEnd);
+  let move = 0;
+  for (const ticker of tickers) {
+    const start = pricesStart[ticker] || 0;
+    const end = pricesEnd[ticker] || 0;
+    if (start > 0) move += (end - start) / start;
+  }
+  const avg = move / Math.max(1, tickers.length);
+  if (avg > 0.005) return "up";
+  if (avg < -0.005) return "down";
+  return "flat";
+}
+
+function computeJokerPreview(joker, ctx) {
+  const { distinct, rising, falling, md, tradeCount, roundIndex, pricesEnd, pricesStart, held } = ctx;
+  const { id, effectKind, value, trigger, threshold, max } = joker;
+  const multAdd = (label, amount) => ({ kind: "mult-add", label, value: amount });
+  const chipsAdd = (label, amount) => ({ kind: "chips-add", label, value: amount });
+  const mult = (label, amount) => ({ kind: "mult", label, value: amount });
+
+  switch (trigger) {
+    case "always":
+      return effectKind === "mult" ? mult(joker.name, value) : chipsAdd(joker.name, value);
+    case "bull-market":
+      if (md !== "up") return null;
+      return effectKind === "mult" ? mult(joker.name, value) : multAdd(joker.name, value);
+    case "bear-market":
+      if (md !== "down") return null;
+      return chipsAdd(joker.name, value);
+    case "diversification": {
+      let amount = value * distinct;
+      if (max !== undefined) amount = Math.min(amount, max);
+      return chipsAdd(`${joker.name} (${distinct} held)`, amount);
+    }
+    case "full-spectrum":
+      if (distinct < 4) return null;
+      return multAdd(joker.name, value);
+    case "portfolio-width": {
+      let amount = value * distinct;
+      if (max !== undefined) amount = Math.min(amount, max);
+      return multAdd(`${joker.name} (${distinct} held)`, amount);
+    }
+    case "rising-holding": {
+      const amount = value * rising.length;
+      return chipsAdd(`${joker.name} (${rising.length} rising)`, amount);
+    }
+    case "falling-holding": {
+      const amount = value * falling.length;
+      return multAdd(`${joker.name} (${falling.length} falling)`, amount);
+    }
+    case "day-trade": {
+      const count = Math.min(tradeCount, max ?? tradeCount);
+      if (count <= 0) return null;
+      return chipsAdd(`${joker.name} (${count} trades)`, value * count);
+    }
+    case "diamond-hands": {
+      const history = ctx.roundHistory || [];
+      const limit = Math.min(ctx.roundIndex, history.length);
+      let streak = 0;
+      for (let i = limit - 1; i >= 0; i--) {
+        if (history[i]) streak += 1;
+        else break;
+      }
+      if (streak <= 0) return null;
+      return multAdd(`${joker.name} (${streak} rounds)`, value * streak);
+    }
+    case "insider": {
+      const amount = value * rising.length;
+      return chipsAdd(`${joker.name} (${rising.length} rising)`, amount);
+    }
+    case "blue-chip": {
+      const thr = threshold ?? 40;
+      const established = held.filter(t => (pricesEnd[t.ticker] || 0) >= thr).length;
+      if (established <= 0) return null;
+      return chipsAdd(`${joker.name} (${established} established)`, value * established);
+    }
+    case "penny-stock": {
+      const thr = threshold ?? 25;
+      const cheap = held.filter(t => (pricesEnd[t.ticker] || 0) < thr).length;
+      if (cheap <= 0) return null;
+      return multAdd(`${joker.name} (${cheap} low-priced)`, value * cheap);
+    }
+    case "short-squeeze":
+      if (md !== "down" || rising.length <= 0) return null;
+      return mult(joker.name, value);
+    case "compound-interest": {
+      if (roundIndex <= 0) return null;
+      return multAdd(`${joker.name} (${roundIndex} rounds)`, value * roundIndex);
+    }
+    case "market-analyst":
+      if (rising.length <= 0) return null;
+      return multAdd(joker.name, value);
+    case "contrarian": {
+      let opposed = 0;
+      for (const t of held) {
+        const move = (pricesEnd[t.ticker] || 0) - (pricesStart[t.ticker] || 0);
+        if (md === "up" && move < 0) opposed += 1;
+        else if (md === "down" && move > 0) opposed += 1;
+      }
+      if (opposed <= 0) return null;
+      return chipsAdd(`${joker.name} (${opposed} contrarian)`, value * opposed);
+    }
+    default:
+      return null;
+  }
+}
+
+function previewJokerContributions() {
+  if (!runState || runState.phase !== "trading") return [];
+  const jokerIds = runState.jokers || [];
+  if (!jokerIds.length || !jokerCatalog) return [];
+
+  const held = state.companies.filter(c => c.shares > 0);
+  const distinct = held.length;
+  const startPrices = runState.roundStartPrices || {};
+  const pricesEnd = {};
+  const pricesStart = {};
+  for (const c of state.companies) {
+    pricesEnd[c.ticker] = c.price;
+    pricesStart[c.ticker] = Number(startPrices[c.ticker]) || 0;
+  }
+  const rising = held.filter(c => (pricesEnd[c.ticker] || 0) > (pricesStart[c.ticker] || 0));
+  const falling = held.filter(c => (pricesEnd[c.ticker] || 0) < (pricesStart[c.ticker] || 0));
+  const md = marketDirectionClient(pricesEnd, pricesStart);
+  const tradeCount = runState.tradeCount || 0;
+  const roundIndex = runState.round || 1;
+
+  const byId = {};
+  jokerCatalog.jokers.forEach(j => { byId[j.id] = j; });
+
+  const contributions = [];
+  for (const id of jokerIds) {
+    const joker = byId[id];
+    if (!joker) continue;
+    const effect = computeJokerPreview(joker, {
+      distinct, rising, falling, md, tradeCount, roundIndex,
+      pricesEnd, pricesStart, held,
+      roundHistory: runState.roundHistory || [],
+    });
+    if (effect && Number(effect.value) !== 0) contributions.push({ ...effect, jokerId: id, name: joker.name, rarity: joker.rarity });
+  }
+  return contributions;
+}
+
+function jokerContributionLabel(effect) {
+  const value = Number(effect.value) || 0;
+  if (effect.kind === "chips-add") return `+${value.toLocaleString()} chips`;
+  if (effect.kind === "mult-add") return `+${value}× mult`;
+  if (effect.kind === "mult") return `×${value} mult`;
+  return `+${value}`;
+}
+
+// Paint which owned Jokers are contributing to the live preview. The rail card
+// and the contribution chip share the same state, like Jokers lighting up in
+// Balatro. Display-only: the locked score always comes from the server.
+function renderJokerPreview() {
+  const wrap = $("floor-joker-contrib");
+  const list = $("floor-joker-list");
+  const contributions = previewJokerContributions();
+  const byId = new Map(contributions.map(contribution => [contribution.jokerId, contribution]));
+
+  if (list) {
+    list.replaceChildren();
+    for (const contribution of contributions) {
+      const chip = document.createElement("span");
+      chip.className = "floor-joker-chip is-active";
+      chip.dataset.jokerId = contribution.jokerId;
+      chip.dataset.rarity = contribution.rarity;
+      chip.title = `${contribution.name} — ${jokerContributionLabel(contribution)}`;
+      chip.innerHTML = `<span class="floor-joker-name">${contribution.name}</span><span class="floor-joker-value">${jokerContributionLabel(contribution)}</span>`;
+      list.append(chip);
+    }
+  }
+  if (wrap) wrap.hidden = !contributions.length;
+
+  document.querySelectorAll("#market-joker-cards .market-joker-card").forEach(card => {
+    const id = card.dataset.jokerId;
+    const effect = byId.get(id);
+    if (!card.dataset.baseLabel) card.dataset.baseLabel = card.getAttribute("aria-label") || "";
+    const base = card.dataset.baseLabel;
+    card.classList.toggle("is-contributing", Boolean(effect));
+    const oldBadge = card.querySelector(".market-joker-contrib-badge");
+    if (oldBadge) oldBadge.remove();
+    if (effect) {
+      const badge = document.createElement("span");
+      badge.className = "market-joker-contrib-badge";
+      badge.textContent = jokerContributionLabel(effect);
+      card.append(badge);
+      card.setAttribute("aria-label", `${base} — contributing ${jokerContributionLabel(effect)}`);
+    } else {
+      card.setAttribute("aria-label", base);
+    }
+  });
+  return contributions;
+}
+
+// A short tactile reaction when a trade makes a Joker newly relevant. The
+// card flashes and the existing joker cue plays; no score is recalculated here.
+function flashJokerContributions(beforeIds, afterContributions) {
+  const added = afterContributions.filter(contribution => !beforeIds.has(contribution.jokerId));
+  if (!added.length) return;
+  cue("joker");
+  if (reducedMotion.matches) return;
+  for (const contribution of added) {
+    const card = document.querySelector(`#market-joker-cards .market-joker-card[data-joker-id="${contribution.jokerId}"]`);
+    if (!card) continue;
+    card.classList.remove("joker-fires");
+    void card.offsetWidth;
+    card.classList.add("joker-fires");
+    setTimeout(() => card.classList.remove("joker-fires"), 560);
+  }
 }
 
 function unrealizedProfit(company) {
@@ -738,6 +955,7 @@ async function loadDailySummary() {
 async function trade(index, action) {
   if (pendingTrade) return;
   unlockAudio();
+  const contributingBefore = new Set(previewJokerContributions().map(contribution => contribution.jokerId));
   const company = state.companies[index];
   const amount = Math.floor(Number($(`amount-${index}`).value));
   if (!Number.isFinite(amount) || amount < 1) {
@@ -794,6 +1012,7 @@ async function trade(index, action) {
   } finally {
     pendingTrade = null;
     render();
+    flashJokerContributions(contributingBefore, previewJokerContributions());
   }
 }
 
@@ -1104,6 +1323,7 @@ function renderMarketJokerRail(live) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "market-joker-card";
+    card.dataset.jokerId = id;
     card.dataset.rarity = joker.rarity;
     const firedLabel = fired.get(id);
     if (firedLabel) card.classList.add("is-fired");
@@ -1251,6 +1471,7 @@ function renderRunStrip() {
   const hud = $("floor-score-hud");
   if (hud) hud.hidden = !live;
   renderMarketJokerRail(live);
+  renderJokerPreview();
   if (!live) return;
   $("run-ante").textContent = `${runState.ante} / ${runRules.antes}`;
   $("run-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;

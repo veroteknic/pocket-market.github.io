@@ -1,5 +1,12 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.2 — Joker preview activation
+
+- Owned Jokers now visibly mark when they contribute to the live round-score preview: the rail card gains a brass state and a value badge, and a contribution strip beneath the HUD lists each contributing Joker with its effect (+25 chips, +0.25× mult, etc.).
+- When a trade makes a Joker newly relevant, its card lifts briefly and the existing joker cue plays — tactile feedback without recalculating any score in the browser.
+- The display-only preview mirrors the Worker's Joker triggers (market direction, rising/falling holdings, trade count, held-round streak) but the server remains the only source of the locked score.
+- Added `data-joker-id` to rail cards so their state can be verified in tests.
+
 ## 2026-11-25 — Update dialog, version bump
 
 - Added a global version tracker (`VERSION`) and a quickly dismissable update dialog that shows the latest changelog when the shipped version changes. The acknowledged version is stored in `localStorage` so the dialog only appears once per release.
