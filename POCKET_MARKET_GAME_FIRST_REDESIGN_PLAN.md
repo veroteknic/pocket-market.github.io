@@ -177,7 +177,7 @@ placement/run duration.
 | Phase | State | Notes |
 | --- | --- | --- |
 | 1 — Audit and preservation checklist | **Complete** | This document. |
-| 2 — Design tokens, typography, surfaces, animation system | **In progress** | Palette, radius, motion and surface tokens applied; reusable terminal animation primitives added. Needs visual and regression verification before completion. |
+| 2 — Design tokens, typography, surfaces, animation system | **Complete** | Specified terminal palette applied as root tokens; radius/motion/easing tokens added; reusable terminal-enter/pulse/sweep primitives with reduced-motion guards; visible surface radii converted; generic gradients removed from HUD/score/joker/market surfaces; flat distinguishable rarity colours. Verified: syntax, 48/48 browser flow checks, 4/4 responsive layout audits, 17/17 production checks. |
 | 3 — Rebuild trading terminal | Not started | Keep all existing market/trade APIs and run HUD behaviour. |
 | 4 — Redesign Jokers, shop, scoring, boss screens | Not started | Do not invent new Joker mechanics. |
 | 5 — Redesign menu, results, settings, leaderboard | Not started | Settings screen is currently absent; add only as a real functional screen or record as out of scope. |
