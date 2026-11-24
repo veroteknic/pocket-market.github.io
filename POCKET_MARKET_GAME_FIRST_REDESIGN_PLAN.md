@@ -184,7 +184,7 @@ placement/run duration.
 | 2e — Version bump, CHANGELOG, global update dialog | **Complete** | Added `VERSION` constant and `CHANGELOG.md`. Added a quickly dismissable global update dialog that shows the latest changelog when the shipped version changes; acknowledged version stored in `localStorage`. Cache-bust bumped to `?v=2026-11-25-update-dialog`. Verified: syntax, 51/51 browser flow checks, 4/4 responsive layout audits. |
 | 2f — Joker preview activation | **Complete** | Owned Jokers lighting up in the market rail when they contribute to the live preview, with per-Joker value badges, a contribution strip beneath the HUD, a short lift + existing joker cue when a trade makes one newly relevant, and display-only mirroring of Worker triggers. Server remains authoritative for locked scores. Verified: syntax, 55/55 browser flow checks, 4/4 responsive layout audits. |
 | 3 — Rebuild trading terminal | **Complete** | Object-based board focus, game-first menu hierarchy, subordinate supporting panels, fill feedback, and distinct counter/tally-sheet/challenge-card compositions for Shop/Results/Boss. Market/trade APIs and run HUD behaviour unchanged. Verified: syntax, 65/65 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 4 — Redesign Jokers, shop, scoring, boss screens | Not started | Do not invent new Joker mechanics. |
+| 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 71/71 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 5 — Redesign menu, results, settings, leaderboard | Not started | Settings screen is currently absent; add only as a real functional screen or record as out of scope. |
 | 6 — Mobile and accessibility | Not started | 44px touch targets, keyboard focus, semantic controls, reduced motion. |
 | 7 — Regression, multiplayer, deployment testing | Not started | Include Worker tests, mock-browser QC, responsive audits, production checks. |
@@ -209,6 +209,7 @@ Reviewed against the Balatro-inspired design brief (principles only, no copied a
 - **Resolved in 2f/3:** Jokers were passive information; they now light up and sound when they affect the preview. The board had no focus concept; selecting a security now drives the tape and gives that row a brass edge. Redundant captions and the last flavourtext label are gone.
 - **Resolved in 3a:** the menu leads with one dominant Start/Continue action and a compact secondary grid; dispatches and the leaderboard use subordinate typography; a fill lights up the newly held row and the marker survives tick redraws. All existing control IDs and the classic-board escape hatch remain.
 - **Resolved in 3b:** Shop is a counter with a currency plaque, Results is a tally sheet with the score as a bordered object, and Boss is a framed challenge card with a glyph object. No screen relies on a generic header-plus-panel template.
+- **Resolved in 4:** cards and scoring rows now carry their own state and provenance instead of hiding it in a detail panel or relying on order alone: Joker effect badges, Shop Owned/Need N badges, numbered scoring steps with Joker names, and a labelled Boss rule.
 - **Not in scope:** new gameplay, backend changes, settings/achievements invented as placeholders.
 
 ## Phase 3a record — 2026-11-25
@@ -235,8 +236,21 @@ Verified: syntax, 65/65 browser flow checks (added per-screen composition assert
 layout audits, 12/12 Shop/Results/Boss responsive audits (`pm-qc/screens.mjs`), screenshots captured
 including results and boss.
 
+## Phase 4 record — 2026-11-25
+
+Presentation-only content-depth pass. `renderJokersScreen` now appends a compact effect line to each
+owned Joker card using the same `jokerEffectLabel` / `jokerValueLabel` helpers as the detail panel.
+`renderShopScreen` adds `is-owned` and `is-unaffordable` card states plus a Need N button label; the
+CSS draws the matching badge on the card object so a disabled offer explains itself. `renderScoreScreen`
+adds a two-digit step number and a Joker source name to each effect row, and `.boss-detail::before`
+adds a small Rule label. No score, price, currency, shop inventory, run, or authority logic changed.
+
+Verified: syntax, 71/71 browser flow checks (six added assertions for content states and labels),
+4/4 floor layout audits, 12/12 Shop/Results/Boss responsive audits, screenshots including the new
+post-purchase shop state. No Worker change or deploy.
+
 ## Next milestone
 
-Phase 4: deepen the Joker/Shop/Scoring/Boss screen content without inventing new mechanics, keeping
-the server authoritative for scores, shop inventory, purchases, and run progression. No Worker change
-or deploy without explicit authorization.
+Phase 5: refine the menu, results, leaderboard and collection hierarchy without inventing Settings or
+Achievements screens. Keep the server authoritative for scores, shop inventory, purchases, and run
+progression. No Worker change or deploy without explicit authorization.

@@ -1,12 +1,16 @@
 # Pocket Market — Roguelike Transformation Plan
 
-Status: **Phases 0–8 implemented; Phase 8 arcade playfield polish complete. Phase 9/10 outstanding.**
-Last updated: 2026-11-23
+Status: **Phases 0–8 implemented; game-first redesign Phases 1–4 complete. Phase 9/10 outstanding.**
+Last updated: 2026-11-25
 Source specification: `AGENTS.md`, section “MY SECTION”.
 
 The separate game-first redesign brief is tracked in
 `POCKET_MARKET_GAME_FIRST_REDESIGN_PLAN.md`. Its Phase 1 preservation checklist supersedes stale
 claims in this historical plan where they conflict with shipped code.
+
+Latest milestone: the game-first content-depth pass made Joker, Shop, Scoring and Boss states legible
+on the objects themselves without changing gameplay or server authority. Details and verification are
+recorded in the redesign brief.
 
 This document is the working plan required by the specification. It records what exists
 today, what the roguelike architecture will be, how the existing game will be migrated

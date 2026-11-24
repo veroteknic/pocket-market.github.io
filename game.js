@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.6";
+const VERSION = "2026-11-25.7";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -1456,6 +1456,10 @@ function renderJokersScreen() {
       <h3 class="joker-name">${joker.name}</h3>
       <span class="joker-rarity">${joker.rarity}</span>
       <p class="joker-desc">${joker.description}</p>
+      <span class="joker-effect-line">
+        <span class="joker-effect-kind">${jokerEffectLabel(joker.effectKind)}</span>
+        <strong class="joker-effect-value">${jokerValueLabel(joker)}</strong>
+      </span>
     `;
     card.addEventListener("click", () => {
       [...grid.querySelectorAll(".is-selected")].forEach(other => other.classList.remove("is-selected"));
@@ -1805,7 +1809,7 @@ function renderScoreScreen() {
   const list = $("score-effects");
   list.replaceChildren();
   const activeJokerIds = [];
-  result.effects.forEach(effect => {
+  result.effects.forEach((effect, index) => {
     const row = document.createElement("li");
     row.className = "score-effect";
     row.dataset.kind = effect.kind;
@@ -1814,9 +1818,22 @@ function renderScoreScreen() {
       row.dataset.jokerId = effect.jokerId;
       if (!activeJokerIds.includes(effect.jokerId)) activeJokerIds.push(effect.jokerId);
     }
+    const step = document.createElement("span");
+    step.className = "score-effect-step";
+    step.textContent = String(index + 1).padStart(2, "0");
+    const info = document.createElement("span");
+    info.className = "score-effect-info";
     const label = document.createElement("span");
     label.className = "score-effect-label";
     label.textContent = effect.label;
+    info.append(label);
+    if (effect.jokerId) {
+      const joker = jokerCatalog?.jokers?.find(item => item.id === effect.jokerId);
+      const source = document.createElement("span");
+      source.className = "score-effect-source";
+      source.textContent = joker ? joker.name : "Joker";
+      info.append(source);
+    }
     const value = document.createElement("span");
     value.className = "score-effect-value";
     const amount = document.createElement("span");
@@ -1825,7 +1842,7 @@ function renderScoreScreen() {
     const unit = document.createElement("small");
     unit.textContent = effect.kind === "chips" || effect.kind === "chips-add" ? "chips" : "mult";
     value.append(amount, unit);
-    row.append(label, value);
+    row.append(step, info, value);
     list.append(row);
   });
 
@@ -2353,13 +2370,19 @@ function renderShopScreen() {
       card.style.setProperty("--deal-index", String(dealIndex++));
       const owned = shopState.owned.includes(joker.id);
       const affordable = shopState.currency >= offer.price;
+      if (owned) card.classList.add("is-owned");
+      else if (!affordable) {
+        card.classList.add("is-unaffordable");
+        card.dataset.need = String(Math.max(0, offer.price - shopState.currency));
+      }
+      const buyLabel = owned ? "Owned" : affordable ? "Buy" : `Need ${Math.max(0, offer.price - shopState.currency)}`;
       card.innerHTML = `
         ${jokerArtMarkup(joker, "shop-art joker-art")}
         <h3 class="shop-name">${joker.name}</h3>
         <span class="shop-rarity-chip">${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</span>
         <p class="shop-desc">${joker.description}</p>
         <div class="shop-price">$${offer.price}</div>
-        <button class="shop-buy" type="button" ${owned ? "disabled" : ""} ${!affordable ? "disabled" : ""} data-joker-id="${joker.id}">${owned ? "Owned" : "Buy"}</button>
+        <button class="shop-buy" type="button" ${owned ? "disabled" : ""} ${!affordable ? "disabled" : ""} data-joker-id="${joker.id}">${buyLabel}</button>
       `;
       grid.append(card);
       any = true;

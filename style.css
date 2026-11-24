@@ -888,15 +888,30 @@ button.tap { animation: button-pop 160ms ease-out; }
 .score-effects { margin: 28px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
 .score-effect {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 3ch minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 20px;
+  gap: 14px;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
   opacity: 0;
   transform: translateY(6px);
 }
 .score-effect.revealed { opacity: 1; transform: none; transition: opacity 180ms ease, transform 180ms ease; }
+.score-effect-step {
+  color: var(--faint);
+  font: 600 10px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.score-effect-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.score-effect-source {
+  color: var(--brass);
+  font: 600 9px/1.2 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .score-effect-label {
   color: var(--muted);
   font: 600 10.5px/1.3 var(--mono);
@@ -1641,6 +1656,29 @@ body.dev-open { padding-right: 410px; }
   color: var(--muted);
   font: 11px/1.5 var(--mono);
 }
+/* Owned cards carry their effect on the object itself, not only in the detail
+   panel, so a row of Jokers can be compared at a glance. */
+.joker-effect-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.joker-effect-kind {
+  color: var(--faint);
+  font: 600 8.5px/1.2 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.joker-effect-value {
+  color: var(--gold);
+  font: 600 12px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
 
 [data-rarity="common"] { border-color: #4a3d29; }
 [data-rarity="common"] .joker-rarity { color: #8a7c6a; }
@@ -1833,6 +1871,29 @@ body.dev-open { padding-right: 410px; }
   pointer-events: none;
 }
 .shop-card.is-purchasing { pointer-events: none; opacity: 0.7; }
+/* Card-level states: the object says why it cannot be bought before the
+   player has to read the disabled button. */
+.shop-card.is-owned:not(.is-sold) { border-color: var(--brass); }
+.shop-card.is-owned:not(.is-sold)::after,
+.shop-card.is-unaffordable:not(.is-sold)::after {
+  content: "OWNED";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 5px;
+  border: 1px solid var(--brass);
+  border-radius: var(--radius);
+  background: rgba(23, 25, 22, 0.9);
+  color: var(--gold);
+  font: 700 8px/1 var(--mono);
+  letter-spacing: 0.14em;
+}
+.shop-card.is-unaffordable:not(.is-sold)::after {
+  content: "NEED " attr(data-need);
+  border-color: var(--red);
+  color: var(--red);
+}
+.shop-card.is-unaffordable:not(.is-sold) .shop-art { opacity: 0.55; }
 .shop-card.is-sold {
   animation: shopSold 380ms ease forwards;
   pointer-events: none;
@@ -2025,6 +2086,15 @@ body.dev-open { padding-right: 410px; }
   margin: 0 0 22px;
   color: var(--muted);
   font: 12px/1.6 var(--mono);
+}
+.boss-detail::before {
+  content: "Rule";
+  display: block;
+  margin-bottom: 8px;
+  color: var(--brass);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .boss-actions {

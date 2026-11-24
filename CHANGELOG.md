@@ -1,5 +1,13 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.7 — Content depth and readable states
+
+- Owned Joker cards now show their effect kind and value on the card itself, so a collection can be compared without opening each detail panel.
+- Shop cards now state their state on the object: Owned, or Need N when credits are short; the buy button repeats the same information for keyboard and screen-reader users.
+- Scoring effects are numbered and name the Joker that produced them, making the calculation order legible without changing any score values.
+- Boss rules now carry an explicit Rule label instead of relying on a bare sentence.
+- Expanded browser QC to cover the new card states, effect labels, numbered steps and boss label.
+
 ## 2026-11-25.6 — Screen identity pass
 
 - Shop now reads as a counter: centred title, an exit, and a brass currency plaque holding credits and reroll.
