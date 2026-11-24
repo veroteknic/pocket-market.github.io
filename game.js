@@ -102,18 +102,19 @@ function applyCrt(enabled, persist = true) {
 applyCrt(localStorage.getItem("pocket-market-crt") !== "off", false);
 $("dev-crt").addEventListener("click", () => applyCrt(document.body.dataset.crt === "off"));
 
-// Three-tier screenshake. Magnitude scales with the impulse, and the whole
-// thing is skipped when the OS asks for reduced motion.
+// Three-tier screenshake. Magnitude scales with the impulse, and the shake
+// targets the affected element only — never the whole screen. Skipped when
+// the OS asks for reduced motion.
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let shakeCleanup = 0;
-function shake(intensity = "sm") {
+function shake(target, intensity = "sm") {
   if (reducedMotion.matches) return;
-  const shell = document.querySelector("main");
-  shell.classList.remove("shake-sm", "shake-md", "shake-lg");
-  void shell.offsetWidth;
-  shell.classList.add(`shake-${intensity}`);
+  const el = target || document.querySelector("main");
+  el.classList.remove("shake-sm", "shake-md", "shake-lg");
+  void el.offsetWidth;
+  el.classList.add(`shake-${intensity}`);
   clearTimeout(shakeCleanup);
-  shakeCleanup = setTimeout(() => shell.classList.remove("shake-sm", "shake-md", "shake-lg"), 400);
+  shakeCleanup = setTimeout(() => el.classList.remove("shake-sm", "shake-md", "shake-lg"), 400);
 }
 
 // One-shot event punctuation: a short chromatic bloom on the news panel and on
@@ -759,7 +760,8 @@ async function trade(index, action) {
     }
     const realizedGain = (result.player.realizedProfit || 0) - realizedBefore;
     const heavy = Math.abs(result.impact || 0) >= 0.035 || Math.abs(realizedGain) >= 250;
-    shake(heavy ? "md" : "sm");
+    const row = document.querySelector(`#market tr[data-ticker="${company.ticker}"]`);
+    if (row) shake(row, heavy ? "md" : "sm");
     cue(action === "buy" ? "buy" : "sell");
     if (heavy) cue("fill");
     const slipped = Number.isFinite(result.marketPrice) && result.marketPrice !== result.price;
@@ -843,7 +845,7 @@ function connectToMarket() {
       const eventKey = `${update.event.expiresAt}:${update.event.headline}`;
       if (eventKey !== lastEventKey) {
         lastEventKey = eventKey;
-        shake(Math.abs(update.event.effect || 0) >= 0.06 ? "lg" : "md");
+        shake($("featured-news"), Math.abs(update.event.effect || 0) >= 0.06 ? "lg" : "md");
         punctuate(update.event);
         cue(update.event.kind === "boom" ? "boom" : "crash");
       }
@@ -1464,10 +1466,10 @@ function playScoreSequence(result) {
     if (!active()) return;
     const shake = result.score >= result.target * 2 ? "shake-lg"
       : result.score >= result.target ? "shake-md" : "shake-sm";
-    const main = document.querySelector("main");
-    if (main) {
-      main.classList.add(shake);
-      setTimeout(() => main.classList.remove(shake), 320);
+    const scoreTotal = document.querySelector(".score-total") || $("score-final");
+    if (scoreTotal) {
+      scoreTotal.classList.add(shake);
+      setTimeout(() => scoreTotal.classList.remove(shake), 320);
     }
     animateNumber($("score-final"), 0, result.score, v => Math.round(v).toLocaleString(), 760);
 

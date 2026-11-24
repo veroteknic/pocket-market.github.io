@@ -1203,35 +1203,30 @@ body.dev-open { padding-right: 410px; }
 /* ---------- Motion ---------- */
 
 /*
-  Screenshake: three magnitudes rather than one, so a routine trade feels
-  different from a crash. Small impulses are translation only; medium and
-  large add a fraction of a degree of rotation, which is what makes the motion
-  read as force instead of a rendering glitch.
+  Subtle element shake: tiny translations and barely-there rotation, applied
+  to the affected element only. Reads as a tactile reaction to a press or
+  impact, never a seizure. Reduced motion disables it entirely.
 */
 @keyframes shell-shake-sm {
   0%, 100% { transform: translate(0, 0) rotate(0); }
-  25% { transform: translate(-3px, 2px) rotate(-0.14deg); }
-  50% { transform: translate(3px, -2px) rotate(0.12deg); }
-  75% { transform: translate(-1.5px, 1px) rotate(-0.06deg); }
+  50% { transform: translate(-1px, 0.5px) rotate(-0.03deg); }
 }
 @keyframes shell-shake-md {
   0%, 100% { transform: translate(0, 0) rotate(0); }
-  20% { transform: translate(-5px, 3px) rotate(-0.26deg); }
-  40% { transform: translate(5px, -3px) rotate(0.22deg); }
-  60% { transform: translate(-3px, -2px) rotate(-0.14deg); }
-  80% { transform: translate(3px, 2px) rotate(0.1deg); }
+  25% { transform: translate(-1.5px, 0.75px) rotate(-0.05deg); }
+  50% { transform: translate(1.5px, -0.75px) rotate(0.05deg); }
+  75% { transform: translate(-0.75px, 0.25px) rotate(-0.02deg); }
 }
 @keyframes shell-shake-lg {
   0%, 100% { transform: translate(0, 0) rotate(0); }
-  15% { transform: translate(-8px, 5px) rotate(-0.45deg); }
-  30% { transform: translate(8px, -5px) rotate(0.4deg); }
-  45% { transform: translate(-6px, -4px) rotate(-0.3deg); }
-  60% { transform: translate(6px, 4px) rotate(0.26deg); }
-  78% { transform: translate(-3px, -2px) rotate(-0.12deg); }
+  20% { transform: translate(-2px, 1px) rotate(-0.07deg); }
+  40% { transform: translate(2px, -1px) rotate(0.07deg); }
+  60% { transform: translate(-1px, 0.5px) rotate(-0.03deg); }
+  80% { transform: translate(1px, -0.5px) rotate(0.03deg); }
 }
-.shake-sm { animation: shell-shake-sm 170ms ease-out both; }
-.shake-md { animation: shell-shake-md 220ms ease-out both; }
-.shake-lg { animation: shell-shake-lg 300ms ease-out both; }
+.shake-sm { animation: shell-shake-sm 120ms ease-out both; }
+.shake-md { animation: shell-shake-md 150ms ease-out both; }
+.shake-lg { animation: shell-shake-lg 180ms ease-out both; }
 
 /*
   Price flash: a repriced cell paints green or red once, so the board reads as
