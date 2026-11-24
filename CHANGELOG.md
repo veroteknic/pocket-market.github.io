@@ -1,5 +1,9 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.4 — Update dialog fix
+
+- Fixed a bug where dismissing the update dialog threw an error and failed to remember the version, causing the dialog to reappear on every load.
+
 ## 2026-11-25.3 — Game-first board focus
 
 - Selecting a security on the market board now brings it into focus with a brass edge; the price-history tape follows the same selection. One source of truth keeps the two in sync.

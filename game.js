@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.3";
+const VERSION = "2026-11-25.4";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -120,7 +120,7 @@ function shake(target, intensity = "sm") {
 
 // Global update dialog: shows the latest changelog when the shipped version
 // changes. Quickly dismissable; remembers the acknowledged version in localStorage.
-const seenVersion = localStorage.getItem("pocket-market-seen-version");
+let seenVersion = localStorage.getItem("pocket-market-seen-version");
 let updateDialogShown = false;
 
 function showUpdateDialog() {
