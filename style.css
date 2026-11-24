@@ -2997,6 +2997,14 @@ body.dev-open { padding-right: 410px; }
   text-transform: uppercase;
 }
 .market-joker-head small { color: var(--gold); font-size: 10px; }
+.market-joker-head em {
+  margin-left: auto;
+  color: var(--brass);
+  font: 600 9px/1 var(--mono);
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
 .market-joker-cards {
   display: flex;
   flex-wrap: wrap;
@@ -3039,6 +3047,23 @@ body.dev-open { padding-right: 410px; }
   overflow: hidden;
   font: 600 9.5px/1.2 var(--display);
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.market-joker-card.is-fired {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 1px rgba(215, 162, 74, 0.22), 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+.market-joker-badge {
+  display: block;
+  margin-top: 6px;
+  padding: 3px 4px;
+  border-radius: 2px;
+  background: var(--brass);
+  color: #17130c;
+  overflow: hidden;
+  font: 600 8px/1.3 var(--mono);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 

@@ -1035,12 +1035,35 @@ function jokerArtMarkup(joker, className = "joker-art") {
 
 let marketJokerRailKey = "";
 
+// The last scored round is read from server history, so the Market screen can
+// show which Jokers fired without recalculating anything in the browser.
+function lastScoringJokerEffects() {
+  const history = runState?.roundHistory || [];
+  const result = history[history.length - 1] || null;
+  const fired = new Map();
+  if (result) {
+    (result.effects || []).forEach(effect => {
+      if (!effect?.jokerId) return;
+      const amount = Number(effect.value) || 0;
+      const unit = effect.kind === "chips" || effect.kind === "chips-add" ? " chips" : " mult";
+      const label = `${formatEffectAmount(effect.kind, amount)}${unit}`;
+      fired.set(effect.jokerId, fired.has(effect.jokerId) ? `${fired.get(effect.jokerId)} · ${label}` : label);
+    });
+    if (!fired.size && Array.isArray(result.jokerIds)) {
+      result.jokerIds.forEach(id => fired.set(id, "fired"));
+    }
+  }
+  return { fired, result };
+}
+
 function renderMarketJokerRail(live) {
   const rail = $("market-joker-rail");
   const cards = $("market-joker-cards");
   if (!rail || !cards) return;
   const owned = live ? (runState?.jokers || []) : [];
-  const key = `${owned.join("|")}:${jokerCatalog?.jokers?.length || 0}`;
+  const { fired, result } = lastScoringJokerEffects();
+  const firedKey = [...fired].map(([id, label]) => `${id}=${label}`).join(";");
+  const key = `${owned.join("|")}:${jokerCatalog?.jokers?.length || 0}:${firedKey}`;
   if (key === marketJokerRailKey) return;
   marketJokerRailKey = key;
   rail.hidden = !owned.length;
@@ -1058,15 +1081,31 @@ function renderMarketJokerRail(live) {
     card.type = "button";
     card.className = "market-joker-card";
     card.dataset.rarity = joker.rarity;
-    card.setAttribute("aria-label", `${joker.name} — open jokers`);
+    const firedLabel = fired.get(id);
+    if (firedLabel) card.classList.add("is-fired");
+    card.setAttribute("aria-label", firedLabel
+      ? `${joker.name} — fired last round (${firedLabel}) — open jokers`
+      : `${joker.name} — open jokers`);
     card.innerHTML = `
       <span class="market-joker-art">${jokerArtwork(joker)}</span>
       <span class="market-joker-name">${joker.name}</span>
     `;
+    if (firedLabel) {
+      const badge = document.createElement("span");
+      badge.className = "market-joker-badge";
+      badge.textContent = firedLabel;
+      card.append(badge);
+    }
     card.addEventListener("click", () => navigate("jokers"));
     cards.append(card);
   });
   if ($("market-joker-count")) $("market-joker-count").textContent = String(cards.children.length);
+  const lastLabel = $("market-joker-last");
+  if (lastLabel) {
+    const showLastRound = Boolean(result && fired.size);
+    lastLabel.hidden = !showLastRound;
+    lastLabel.textContent = showLastRound ? `Last round · ${fired.size} fired` : "";
+  }
 }
 
 function renderActiveJokerDetail(joker) {
