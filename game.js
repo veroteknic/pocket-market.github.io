@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.9";
+const VERSION = "2026-11-25.10";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -2773,6 +2773,14 @@ $("menu-classic").addEventListener("click", () => navigate("floor"));
 $("menu-collection").addEventListener("click", () => navigate("collection"));
 $("menu-shop").addEventListener("click", () => navigate("shop"));
 $("menu-stats").addEventListener("click", () => navigate("run-stats"));
+$("menu-signout").addEventListener("click", () => {
+  localStorage.removeItem("pocket-market-player-name");
+  $("identity-gate").hidden = false;
+  document.body.dataset.screen = "menu";
+  document.querySelectorAll(".screen").forEach(s => s.hidden = true);
+  document.getElementById("screen-menu").hidden = false;
+  renderMenu();
+});
 $("score-menu").addEventListener("click", () => navigate("menu"));
 $("score-skip").addEventListener("click", skipScoreSequence);
 $("score-next").addEventListener("click", advanceRunRound);

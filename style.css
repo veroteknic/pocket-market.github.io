@@ -761,6 +761,17 @@ button.tap { animation: button-pop 160ms ease-out; }
 }
 .menu-footer p { margin: 0; color: var(--faint); font: 10.5px/1.6 var(--mono); }
 .menu-footer .sound-toggle { padding: 4px 8px; font-size: 9px; }
+.menu-footer #menu-signout {
+  padding: 4px 8px;
+  font-size: 9px;
+  border: 0;
+  border-bottom: 1px solid var(--line-bright);
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.menu-footer #menu-signout:hover { color: var(--ink); border-bottom-color: var(--brass); }
 
 /* ---------- Run strip ---------- */
 

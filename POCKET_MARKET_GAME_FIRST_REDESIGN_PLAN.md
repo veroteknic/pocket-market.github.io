@@ -185,7 +185,7 @@ placement/run duration.
 | 2f — Joker preview activation | **Complete** | Owned Jokers lighting up in the market rail when they contribute to the live preview, with per-Joker value badges, a contribution strip beneath the HUD, a short lift + existing joker cue when a trade makes one newly relevant, and display-only mirroring of Worker triggers. Server remains authoritative for locked scores. Verified: syntax, 55/55 browser flow checks, 4/4 responsive layout audits. |
 | 3 — Rebuild trading terminal | **Complete** | Object-based board focus, game-first menu hierarchy, subordinate supporting panels, fill feedback, and distinct counter/tally-sheet/challenge-card compositions for Shop/Results/Boss. Market/trade APIs and run HUD behaviour unchanged. Verified: syntax, 65/65 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 72/72 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 5 — Redesign menu, results, settings, leaderboard | **Complete** | Menu run summary now shows whenever a run exists (not only trading/scoring); collection cards carry effect kind and value on the object; results round history flags boss rounds. Settings absent by design; leaderboard unchanged on floor. Presentation only; no new mechanics, no authority changes. Verified: syntax, 74/74 browser flow checks (menu summary + collection effect lines), 4/4 floor layout audits, 12/12 per-screen responsive audits. |
+| 5 — Redesign menu, results, settings, leaderboard | **Complete** | Menu run summary now shows whenever a run exists (not only trading/scoring); collection cards carry effect kind and value on the object; results round history flags boss rounds; menu footer has a Sign out button that clears localStorage and returns to the name gate. Settings absent by design; leaderboard unchanged on floor. Presentation only; no new mechanics, no authority changes. Verified: syntax, 75/75 browser flow checks (added sign-out check), 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 6 — Mobile and accessibility | Not started | 44px touch targets, keyboard focus, semantic controls, reduced motion. |
 | 7 — Regression, multiplayer, deployment testing | Not started | Include Worker tests, mock-browser QC, responsive audits, production checks. |
 
@@ -260,11 +260,16 @@ Presentation-only hierarchy pass. `renderMenu` now shows the run summary (Ante, 
 whenever `runState` exists, not only during trading/scoring phases, so the summary stays visible after
 a round ends. `renderCollectionScreen` appends a compact effect line to each collection card using the
 same `jokerEffectLabel` / `jokerValueLabel` helpers as the jokers screen. `renderResultsScreen` flags
-boss rounds in the round history with a brass "Boss" tag. No score, price, currency, shop inventory,
-run, or authority logic changed.
+boss rounds in the round history with a brass "Boss" tag. The menu footer gains a Sign out button that
+removes `pocket-market-player-name` from localStorage and returns to the name gate. No score, price,
+currency, shop inventory, run, or authority logic changed.
 
-Verified: syntax, 74/74 browser flow checks (menu summary visibility, collection effect lines),
-4/4 floor layout audits, 12/12 Shop/Results/Boss responsive audits. No Worker change or deploy.
+Verified: syntax, 75/75 browser flow checks (added sign-out check), 4/4 floor layout audits,
+12/12 Shop/Results/Boss responsive audits. No Worker change or deploy.
+
+Hotfix 2026-11-25.10: added a Sign out button to the menu footer. Clears the player name from
+localStorage and re-shows the identity gate, so you can sign in as a different player (or re-enable
+dev mode with `veroteknik` / `veroteknic`). No Worker change or deploy.
 
 ## Next milestone
 

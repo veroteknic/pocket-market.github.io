@@ -1,6 +1,6 @@
 # Pocket Market — Roguelike Transformation Plan
 
-Status: **Phases 0–8 implemented; game-first redesign Phases 1–5 complete. Phase 9/10 outstanding.**
+Status: **Phases 0–8 implemented; game-first redesign Phases 1–5 complete (with sign-out hotfix). Phase 9/10 outstanding.**
 Last updated: 2026-11-25
 Source specification: `AGENTS.md`, section “MY SECTION”.
 

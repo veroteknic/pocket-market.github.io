@@ -1,5 +1,9 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.10 — Sign out
+
+- Added a Sign out button to the menu footer. Clears your player name from localStorage and returns to the name gate, so you can sign in as a different player (or re-enable dev mode with `veroteknik` / `veroteknic`).
+
 ## 2026-11-25.9 — Menu, collection and results hierarchy
 
 - The menu run summary now shows whenever a run exists, not only while trading or scoring — so Ante, Round, Target and Score stay visible after a round ends.
