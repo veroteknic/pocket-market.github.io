@@ -187,7 +187,7 @@ placement/run duration.
 | 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 72/72 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 5 — Redesign menu, results, settings, leaderboard | **Complete** | Menu run summary now shows whenever a run exists (not only trading/scoring); collection cards carry effect kind and value on the object; results round history flags boss rounds; menu footer has a Sign out button that clears localStorage and returns to the name gate. Presentation only; no new mechanics, no authority changes. Verified: syntax, 75/75 browser flow checks (added sign-out check), 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 6 — Settings, achievements, mobile and accessibility | **Complete** | Settings screen controls sound, CRT, reduced motion and default chart view from existing localStorage preferences. Achievements screen tracks nine goals from real career stats; run-end and purchase paths now record those stats. Achievements never affect scores or rewards. Mobile: 44px targets for small controls, keyboard focus, user-level reduced-motion override. Verified: syntax, 91/91 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 7 — Regression, deployment testing | **Complete** | Fixed a real preview/Worker round-index mismatch. Expanded the mock catalog to all 20 Jokers with a full deterministic scoring mirror, added trigger-parity and refresh-during-shop checks, and ran the Worker suite and build. Verified: syntax, 97/97 browser flow checks, 4/4 floor audits, 12/12 screen audits, 45/45 Worker tests, Worker build. |
+| 7 — Regression, deployment testing | **Complete** | Fixed a real preview/Worker round-index mismatch. Expanded the mock catalog to all 20 Jokers with a full deterministic scoring mirror, added trigger-parity and refresh-during-shop checks, and ran the Worker suite and build. Verified: syntax, 97/97 browser flow checks, 4/4 floor audits, 12/12 screen audits, 45/45 Worker tests, Worker build, 17/17 production checks. |
 
 ## Phase 2 record — 2026-11-24
 
@@ -315,8 +315,9 @@ player and one session. That belongs in the next milestone alongside real save-r
 against the deployed Worker.
 
 Verified: syntax, 97/97 browser flow checks, 4/4 floor layout audits, 12/12 Shop/Results/Boss
-responsive audits, 45/45 Worker tests, `cf build`, full-catalog and settings/achievement screenshots.
-No Worker change or Worker deploy.
+responsive audits, 45/45 Worker tests, `cf build`, full-catalog and settings/achievement screenshots,
+and 17/17 production checks with cache-bust `2026-11-25-preview-parity`. No Worker change or Worker
+deploy.
 
 ## Next milestone
 
