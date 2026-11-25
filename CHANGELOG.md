@@ -1,5 +1,12 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.9 — Menu, collection and results hierarchy
+
+- The menu run summary now shows whenever a run exists, not only while trading or scoring — so Ante, Round, Target and Score stay visible after a round ends.
+- Collection cards now carry their effect kind and value on the object, so rarity groups can be scanned at a glance without opening each detail panel.
+- Results round history now flags boss rounds, so the run arc reads at a glance.
+- Added browser QC checks for menu summary visibility, collection effect lines and boss round labels.
+
 ## 2026-11-25.8 — Clean multiplier labels
 
 - Fixed Joker preview badges showing binary-float artefacts such as `+0.8999999999999999× mult`; a three-round Diamond Hands streak now reads `+0.9× mult`.

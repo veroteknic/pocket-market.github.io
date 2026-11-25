@@ -1146,6 +1146,7 @@ button.tap { animation: button-pop 160ms ease-out; }
   font-variant-numeric: tabular-nums;
 }
 #results-rounds .round { color: var(--faint); }
+#results-rounds .round.boss { color: var(--brass); font-weight: 600; }
 #results-rounds .verdict.pass { color: var(--green); }
 #results-rounds .verdict.fail { color: var(--red); }
 #results-rounds .score { color: var(--ink); }

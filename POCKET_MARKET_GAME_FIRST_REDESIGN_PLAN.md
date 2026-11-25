@@ -185,7 +185,7 @@ placement/run duration.
 | 2f — Joker preview activation | **Complete** | Owned Jokers lighting up in the market rail when they contribute to the live preview, with per-Joker value badges, a contribution strip beneath the HUD, a short lift + existing joker cue when a trade makes one newly relevant, and display-only mirroring of Worker triggers. Server remains authoritative for locked scores. Verified: syntax, 55/55 browser flow checks, 4/4 responsive layout audits. |
 | 3 — Rebuild trading terminal | **Complete** | Object-based board focus, game-first menu hierarchy, subordinate supporting panels, fill feedback, and distinct counter/tally-sheet/challenge-card compositions for Shop/Results/Boss. Market/trade APIs and run HUD behaviour unchanged. Verified: syntax, 65/65 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 72/72 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 5 — Redesign menu, results, settings, leaderboard | Not started | Settings screen is currently absent; add only as a real functional screen or record as out of scope. |
+| 5 — Redesign menu, results, settings, leaderboard | **Complete** | Menu run summary now shows whenever a run exists (not only trading/scoring); collection cards carry effect kind and value on the object; results round history flags boss rounds. Settings absent by design; leaderboard unchanged on floor. Presentation only; no new mechanics, no authority changes. Verified: syntax, 74/74 browser flow checks (menu summary + collection effect lines), 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 6 — Mobile and accessibility | Not started | 44px touch targets, keyboard focus, semantic controls, reduced motion. |
 | 7 — Regression, multiplayer, deployment testing | Not started | Include Worker tests, mock-browser QC, responsive audits, production checks. |
 
@@ -254,8 +254,21 @@ label, and `jokerContributionLabel` / `jokerValueLabel` format defensively. A th
 streak now reads `+0.9× mult` instead of exposing `0.8999999999999999`. The server still owns the
 locked score; only display formatting changed.
 
+## Phase 5 record — 2026-11-25
+
+Presentation-only hierarchy pass. `renderMenu` now shows the run summary (Ante, Round, Target, Score)
+whenever `runState` exists, not only during trading/scoring phases, so the summary stays visible after
+a round ends. `renderCollectionScreen` appends a compact effect line to each collection card using the
+same `jokerEffectLabel` / `jokerValueLabel` helpers as the jokers screen. `renderResultsScreen` flags
+boss rounds in the round history with a brass "Boss" tag. No score, price, currency, shop inventory,
+run, or authority logic changed.
+
+Verified: syntax, 74/74 browser flow checks (menu summary visibility, collection effect lines),
+4/4 floor layout audits, 12/12 Shop/Results/Boss responsive audits. No Worker change or deploy.
+
 ## Next milestone
 
-Phase 5: refine the menu, results, leaderboard and collection hierarchy without inventing Settings or
-Achievements screens. Keep the server authoritative for scores, shop inventory, purchases, and run
-progression. No Worker change or deploy without explicit authorization.
+Phase 6: mobile and accessibility pass — 44px touch targets, keyboard focus, semantic controls,
+reduced-motion support, and no horizontal overflow across all screens. Keep the server authoritative
+for scores, shop inventory, purchases, and run progression. No Worker change or deploy without
+explicit authorization.

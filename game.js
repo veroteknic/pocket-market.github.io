@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.8";
+const VERSION = "2026-11-25.9";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -1594,7 +1594,6 @@ function renderMenu() {
   const primary = $("menu-primary");
   const label = $("menu-primary-label");
 
-  summary.hidden = true;
   resultsButton.hidden = true;
   classicButton.hidden = false;
   collectionButton.hidden = false;
@@ -1606,15 +1605,18 @@ function renderMenu() {
   primary.disabled = runBusy;
 
   if (!runState) {
+    summary.hidden = true;
     label.textContent = "Start run";
     primary.dataset.action = "start";
     return;
   }
 
+  // Always show the run summary when a run exists, whatever its phase.
+  summary.hidden = false;
+  $("menu-ante").textContent = `${runState.ante} / ${runRules.antes}`;
+  $("menu-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;
+
   if (runState.phase === "trading" || runState.phase === "scoring") {
-    summary.hidden = false;
-    $("menu-ante").textContent = `${runState.ante} / ${runRules.antes}`;
-    $("menu-round").textContent = `${runState.round} / ${runRules.roundsPerAnte}`;
     $("menu-target").textContent = Number(runState.target).toLocaleString();
     $("menu-score").textContent = Number(runState.scoreTotal || 0).toLocaleString();
     classicButton.hidden = true;
@@ -1628,6 +1630,9 @@ function renderMenu() {
     return;
   }
 
+  // Run has ended (results phase): no active target, but the score stands.
+  $("menu-target").textContent = "—";
+  $("menu-score").textContent = Number(runState.scoreTotal || 0).toLocaleString();
   label.textContent = "Start new run";
   primary.dataset.action = "start";
   resultsButton.hidden = false;
@@ -2159,7 +2164,9 @@ function renderResultsScreen() {
     const item = document.createElement("li");
     const round = document.createElement("span");
     round.className = "round";
-    round.textContent = `A${result.ante}R${result.round}`;
+    const isBoss = result.round === runRules.roundsPerAnte;
+    round.textContent = `A${result.ante}R${result.round}${isBoss ? " · Boss" : ""}`;
+    if (isBoss) round.classList.add("boss");
     const verdict = document.createElement("span");
     verdict.className = `verdict ${result.pass ? "pass" : "fail"}`;
     verdict.textContent = result.pass ? "Pass" : "Miss";
@@ -2278,6 +2285,10 @@ function renderCollectionScreen() {
         <h3 class="joker-name">${joker.name}</h3>
         <span class="joker-rarity">${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</span>
         <p class="joker-desc">${joker.description}</p>
+        <span class="joker-effect-line">
+          <span class="joker-effect-kind">${jokerEffectLabel(joker.effectKind)}</span>
+          <strong class="joker-effect-value">${jokerValueLabel(joker)}</strong>
+        </span>
       `;
       card.addEventListener("click", () => {
         [...grid.querySelectorAll(".joker-card.is-selected")].forEach(other => other.classList.remove("is-selected"));
