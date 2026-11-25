@@ -187,7 +187,7 @@ placement/run duration.
 | 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 72/72 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 5 — Redesign menu, results, settings, leaderboard | **Complete** | Menu run summary now shows whenever a run exists (not only trading/scoring); collection cards carry effect kind and value on the object; results round history flags boss rounds; menu footer has a Sign out button that clears localStorage and returns to the name gate. Presentation only; no new mechanics, no authority changes. Verified: syntax, 75/75 browser flow checks (added sign-out check), 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 6 — Settings, achievements, mobile and accessibility | **Complete** | Settings screen controls sound, CRT, reduced motion and default chart view from existing localStorage preferences. Achievements screen tracks nine goals from real career stats; run-end and purchase paths now record those stats. Achievements never affect scores or rewards. Mobile: 44px targets for small controls, keyboard focus, user-level reduced-motion override. Verified: syntax, 91/91 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 7 — Regression, multiplayer, deployment testing | Not started | Include Worker tests, mock-browser QC, responsive audits, production checks. |
+| 7 — Regression, deployment testing | **Complete** | Fixed a real preview/Worker round-index mismatch. Expanded the mock catalog to all 20 Jokers with a full deterministic scoring mirror, added trigger-parity and refresh-during-shop checks, and ran the Worker suite and build. Verified: syntax, 97/97 browser flow checks, 4/4 floor audits, 12/12 screen audits, 45/45 Worker tests, Worker build. |
 
 ## Phase 2 record — 2026-11-24
 
@@ -292,9 +292,35 @@ Verified: syntax, 91/91 browser flow checks (settings controls, achievement unlo
 4/4 floor layout audits, 12/12 Shop/Results/Boss responsive audits, screenshots for Settings and
 Achievements. No Worker change or deploy.
 
+## Phase 7 record — 2026-11-25
+
+Regression and deployment testing. The browser preview had been using the per-ante round number as
+`roundIndex`; the Worker uses a zero-based global index. That made Diamond Hands and Compound
+Interest read too low from Ante 2 onward. The preview now uses the same global index while remaining
+display-only — the final score is still locked by the server.
+
+The mock harness now carries all 20 Worker Jokers, a deterministic shop generator and a scoring
+mirror for every trigger. Browser QC checks all 22 trigger cases, verifies that the global round
+index matches the Worker, and compares a display-only Joker value with the server-locked value.
+A refresh during a shop visit rehydrates the same credits, offers, rerolls and owned Jokers; a second
+purchase attempt is rejected. No Worker source was changed.
+
+Known backend issue (outstanding, needs authorization): the Worker's `day-trade` trigger returns
+chips even for `Tape Reader`, whose catalog entry declares `mult-add`. The browser preview and mock
+server mirror the Worker exactly so the preview never lies about the final score, but the card text
+and the effect disagree until the Worker is fixed.
+
+Simultaneous multi-player testing is still outstanding: the mock harness intentionally models one
+player and one session. That belongs in the next milestone alongside real save-recovery testing
+against the deployed Worker.
+
+Verified: syntax, 97/97 browser flow checks, 4/4 floor layout audits, 12/12 Shop/Results/Boss
+responsive audits, 45/45 Worker tests, `cf build`, full-catalog and settings/achievement screenshots.
+No Worker change or Worker deploy.
+
 ## Next milestone
 
-Phase 7: regression, multiplayer and deployment testing — Worker suite, extended mock-browser QC
-(including all Jokers), responsive audits and production checks. Keep the server authoritative for
-scores, shop inventory, purchases, and run progression. No Worker change or deploy without explicit
-authorization.
+Phase 8: multiplayer hardening and release QA (spec Phases 9–10) — simultaneous players, shared-market
+consistency, real save recovery, production performance and final console checks. Keep the server
+authoritative for scores, shop inventory, purchases, and run progression. No Worker change or Worker
+deploy without explicit authorization.

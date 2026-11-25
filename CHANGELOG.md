@@ -1,5 +1,11 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.12 — Preview parity regression
+
+- Fixed the display-only Joker preview using the per-ante round number instead of the Worker's global round index. Diamond Hands and Compound Interest now read correctly from Ante 2 onward.
+- Final scores were never affected: scoring stays server-authoritative.
+- Regression coverage now exercises every Joker trigger and a refresh during a shop visit.
+
 ## 2026-11-25.11 — Settings, achievements and accessibility
 
 - Added a Settings screen for sound, CRT, reduced motion and the default chart view. These use the preferences already stored in the browser.

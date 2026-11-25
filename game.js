@@ -1,7 +1,7 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.11";
+const VERSION = "2026-11-25.12";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
@@ -535,7 +535,9 @@ function previewJokerContributions() {
   const falling = held.filter(c => (pricesEnd[c.ticker] || 0) < (pricesStart[c.ticker] || 0));
   const md = marketDirectionClient(pricesEnd, pricesStart);
   const tradeCount = runState.tradeCount || 0;
-  const roundIndex = runState.round || 1;
+  // Match Worker run.ts: roundIndex is the zero-based global round index, not
+  // the per-ante round number. Diamond Hands and Compound Interest depend on it.
+  const roundIndex = (Number(runState.ante) - 1) * runRules.roundsPerAnte + (Number(runState.round) - 1);
 
   const byId = {};
   jokerCatalog.jokers.forEach(j => { byId[j.id] = j; });
