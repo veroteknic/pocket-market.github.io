@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="dark">
   <title>Pocket Market</title>
-  <link rel="stylesheet" href="style.css?v=2026-11-25-signout">
+  <link rel="stylesheet" href="style.css?v=2026-11-25-settings-achievements">
 </head>
 <body>
   <div class="crt" aria-hidden="true"></div>
@@ -34,6 +34,9 @@
       <button id="update-dismiss" class="update-close" type="button" aria-label="Dismiss">✕</button>
     </header>
     <ul class="update-list">
+      <li>Settings screen — sound, CRT, reduced motion and default chart view</li>
+      <li>Achievements screen — nine goals that unlock from real career stats</li>
+      <li>Bigger touch targets and visible keyboard focus on small controls</li>
       <li>Sign out button on the menu — clear your player name and return to the gate</li>
       <li>Menu run summary stays visible after a round ends</li>
       <li>Collection cards show effect kind and value at a glance</li>
@@ -78,8 +81,10 @@
           </button>
           <div class="menu-secondary">
             <button id="menu-collection" class="menu-action" type="button">Collection</button>
-            <button id="menu-shop" class="menu-action" type="button">Shop</button>
+            <button id="menu-achievements" class="menu-action" type="button">Achievements</button>
             <button id="menu-stats" class="menu-action" type="button">Stats</button>
+            <button id="menu-settings" class="menu-action" type="button">Settings</button>
+            <button id="menu-shop" class="menu-action" type="button">Shop</button>
             <button id="menu-results" class="menu-action" type="button" hidden>View results</button>
             <button id="menu-classic" class="menu-action" type="button">Classic board</button>
           </div>
@@ -646,7 +651,64 @@
         </div>
       </div>
     </section>
+
+    <section id="screen-achievements" class="screen screen-achievements" data-screen="achievements" hidden>
+      <div class="achievements-shell">
+        <header class="achievements-head">
+          <button id="achievements-back" class="link-button" type="button">Menu</button>
+          <h2 class="achievements-title">Achievements</h2>
+          <p id="achievements-count" class="achievements-count">0 / 0</p>
+        </header>
+        <div id="achievements-grid" class="achievements-grid"></div>
+      </div>
+    </section>
+
+    <section id="screen-settings" class="screen screen-settings" data-screen="settings" hidden>
+      <div class="settings-shell">
+        <header class="settings-head">
+          <button id="settings-back" class="link-button" type="button">Menu</button>
+          <h2 class="settings-title">Settings</h2>
+        </header>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Sound</strong>
+              <span>Trading and scoring cues</span>
+            </div>
+            <button id="setting-sound" class="settings-toggle" type="button" aria-pressed="true">On</button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>CRT effect</strong>
+              <span>Terminal scanlines and flicker</span>
+            </div>
+            <button id="setting-crt" class="settings-toggle" type="button" aria-pressed="true">On</button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-copy">
+              <strong>Reduced motion</strong>
+              <span>Stop shakes, rolls and card animations</span>
+            </div>
+            <button id="setting-motion" class="settings-toggle" type="button" aria-pressed="false">Off</button>
+          </div>
+          <div class="settings-row settings-row-stack">
+            <div class="settings-copy">
+              <strong>Chart view</strong>
+              <span>Default range on the price tape</span>
+            </div>
+            <div id="setting-chart" class="settings-segments" role="group" aria-label="Default chart range">
+              <button type="button" data-range="day">Day</button>
+              <button type="button" data-range="week">Week</button>
+              <button type="button" data-range="all">All</button>
+            </div>
+          </div>
+        </div>
+        <p class="settings-note">Preferences are stored in this browser.</p>
+      </div>
+    </section>
   </main>
+
+  <div id="achievement-toast" class="achievement-toast" role="status" aria-live="polite" hidden></div>
 
   <aside id="dev-console" hidden>
     <div class="dev-head">
@@ -714,6 +776,6 @@
       </div>
     </div>
   </aside>
-  <script src="game.js?v=2026-11-25-signout"></script>
+  <script src="game.js?v=2026-11-25-settings-achievements"></script>
 </body>
 </html>

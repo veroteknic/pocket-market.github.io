@@ -1,5 +1,13 @@
 # Pocket Market — Changelog
 
+## 2026-11-25.11 — Settings, achievements and accessibility
+
+- Added a Settings screen for sound, CRT, reduced motion and the default chart view. These use the preferences already stored in the browser.
+- Added an Achievements screen with nine goals. They unlock from real career stats — finished runs, survived rounds, cleared bosses and antes, run scores and discovered Jokers.
+- Career stats are now actually recorded when a run reaches results, and discovering a Joker happens as soon as the server confirms the purchase.
+- Reduced motion can now be turned on in Settings without changing your system preference.
+- 44px minimum touch targets for small controls, visible keyboard focus on summaries and tabbable elements, and labelled settings toggles.
+
 ## 2026-11-25.10 — Sign out
 
 - Added a Sign out button to the menu footer. Clears your player name from localStorage and returns to the name gate, so you can sign in as a different player (or re-enable dev mode with `veroteknik` / `veroteknic`).

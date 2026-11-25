@@ -185,8 +185,8 @@ placement/run duration.
 | 2f — Joker preview activation | **Complete** | Owned Jokers lighting up in the market rail when they contribute to the live preview, with per-Joker value badges, a contribution strip beneath the HUD, a short lift + existing joker cue when a trade makes one newly relevant, and display-only mirroring of Worker triggers. Server remains authoritative for locked scores. Verified: syntax, 55/55 browser flow checks, 4/4 responsive layout audits. |
 | 3 — Rebuild trading terminal | **Complete** | Object-based board focus, game-first menu hierarchy, subordinate supporting panels, fill feedback, and distinct counter/tally-sheet/challenge-card compositions for Shop/Results/Boss. Market/trade APIs and run HUD behaviour unchanged. Verified: syntax, 65/65 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 4 — Content depth for Jokers, shop, scoring, boss | **Complete** | Owned Joker cards carry their effect kind and value; Shop cards expose Owned/Need N states on the object and control; scoring effects are numbered and name their Joker source; Boss rules have an explicit Rule label. Display/presentation only; no new mechanics, no authority changes. Verified: syntax, 72/72 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 5 — Redesign menu, results, settings, leaderboard | **Complete** | Menu run summary now shows whenever a run exists (not only trading/scoring); collection cards carry effect kind and value on the object; results round history flags boss rounds; menu footer has a Sign out button that clears localStorage and returns to the name gate. Settings absent by design; leaderboard unchanged on floor. Presentation only; no new mechanics, no authority changes. Verified: syntax, 75/75 browser flow checks (added sign-out check), 4/4 floor layout audits, 12/12 per-screen responsive audits. |
-| 6 — Mobile and accessibility | Not started | 44px touch targets, keyboard focus, semantic controls, reduced motion. |
+| 5 — Redesign menu, results, settings, leaderboard | **Complete** | Menu run summary now shows whenever a run exists (not only trading/scoring); collection cards carry effect kind and value on the object; results round history flags boss rounds; menu footer has a Sign out button that clears localStorage and returns to the name gate. Presentation only; no new mechanics, no authority changes. Verified: syntax, 75/75 browser flow checks (added sign-out check), 4/4 floor layout audits, 12/12 per-screen responsive audits. |
+| 6 — Settings, achievements, mobile and accessibility | **Complete** | Settings screen controls sound, CRT, reduced motion and default chart view from existing localStorage preferences. Achievements screen tracks nine goals from real career stats; run-end and purchase paths now record those stats. Achievements never affect scores or rewards. Mobile: 44px targets for small controls, keyboard focus, user-level reduced-motion override. Verified: syntax, 91/91 browser flow checks, 4/4 floor layout audits, 12/12 per-screen responsive audits. |
 | 7 — Regression, multiplayer, deployment testing | Not started | Include Worker tests, mock-browser QC, responsive audits, production checks. |
 
 ## Phase 2 record — 2026-11-24
@@ -271,9 +271,30 @@ Hotfix 2026-11-25.10: added a Sign out button to the menu footer. Clears the pla
 localStorage and re-shows the identity gate, so you can sign in as a different player (or re-enable
 dev mode with `veroteknik` / `veroteknic`). No Worker change or deploy.
 
+## Phase 6 record — 2026-11-25
+
+Real settings and achievements, plus the mobile/accessibility pass. The new Settings screen reads and
+writes only preferences that already existed in localStorage: sound, CRT, reduced motion and default
+chart range. `motionReduced()` now combines the OS preference with the new user override, and the
+CSS `body[data-motion="reduced"]` rule extends reduced motion to every animation and transition.
+
+The new Achievements screen defines nine goals evaluated from career stats. `recordCareerStats` was
+already present but never called; it is now invoked once when a run reaches the results phase
+(`noteRunEnded`), with `bossesCleared` counted from server-owned round history, and Jokers are marked
+discovered on a confirmed purchase. Achievements are display-only — no score, reward, or unlock
+affects the run. `evaluateAchievements` persists unlock timestamps and shows a short toast.
+
+Accessibility: global `:focus-visible` now covers summaries and tabbable elements; small controls get
+44px minimum height on narrow screens; the settings toggles expose `aria-pressed` and the toast uses
+`role="status"`. No score, price, currency, shop inventory, run, or authority logic changed.
+
+Verified: syntax, 91/91 browser flow checks (settings controls, achievement unlocking, 44px targets),
+4/4 floor layout audits, 12/12 Shop/Results/Boss responsive audits, screenshots for Settings and
+Achievements. No Worker change or deploy.
+
 ## Next milestone
 
-Phase 6: mobile and accessibility pass — 44px touch targets, keyboard focus, semantic controls,
-reduced-motion support, and no horizontal overflow across all screens. Keep the server authoritative
-for scores, shop inventory, purchases, and run progression. No Worker change or deploy without
-explicit authorization.
+Phase 7: regression, multiplayer and deployment testing — Worker suite, extended mock-browser QC
+(including all Jokers), responsive audits and production checks. Keep the server authoritative for
+scores, shop inventory, purchases, and run progression. No Worker change or deploy without explicit
+authorization.

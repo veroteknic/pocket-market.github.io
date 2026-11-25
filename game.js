@@ -1,14 +1,14 @@
 const STARTING_CASH = 10000;
 const MAX_DAYS = 365;
 const TICK_MS = 15000;
-const VERSION = "2026-11-25.10";
+const VERSION = "2026-11-25.11";
 const BACKEND_WS_URL = "wss://pocket-market-worker.unpaidandpoor.workers.dev/ws";
 const BACKEND_HTTP_URL = "https://pocket-market-worker.unpaidandpoor.workers.dev";
 const savedPlayerName = localStorage.getItem("pocket-market-player-name");
 const getPlayerName = () => localStorage.getItem("pocket-market-player-name") || "Anonymous";
 const isDeveloper = () => ["veroteknik", "veroteknic"].includes(getPlayerName().toLowerCase());
 const RUN_RULES_FALLBACK = { antes: 8, roundsPerAnte: 3, startingCash: 10000 };
-const SCREEN_NAMES = ["menu", "run-setup", "round-intro", "floor", "portfolio", "jokers", "score", "ante-complete", "boss", "results", "run-victory", "run-failure", "run-stats", "collection", "shop"];
+const SCREEN_NAMES = ["menu", "run-setup", "round-intro", "floor", "portfolio", "jokers", "score", "ante-complete", "boss", "results", "run-victory", "run-failure", "run-stats", "achievements", "settings", "collection", "shop"];
 
 // IMMEDIATELY hide the identity gate and show the menu, before any JS can fail.
 // This runs as soon as the DOM is ready, ensuring the page is never stuck on a
@@ -109,10 +109,12 @@ $("dev-crt").addEventListener("click", () => applyCrt(document.body.dataset.crt 
 // targets the affected element only — never the whole screen. Skipped when
 // the OS asks for reduced motion.
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+// The OS preference and the in-game Settings toggle are both honoured.
+const motionReduced = () => reducedMotion.matches || localStorage.getItem("pocket-market-reduced-motion") === "on";
 let shakeCleanup = 0;
 let shakeTarget = null;
 function shake(target, intensity = "sm") {
-  if (reducedMotion.matches) return;
+  if (motionReduced()) return;
   const el = target || document.querySelector("main");
   if (shakeTarget && shakeTarget !== el) shakeTarget.classList.remove("shake-sm", "shake-md", "shake-lg");
   shakeTarget = el;
@@ -283,6 +285,11 @@ function applySound(enabled, persist = true) {
     button.textContent = `Sound: ${enabled ? "on" : "off"}`;
     button.setAttribute("aria-pressed", String(enabled));
   });
+  const settingsSound = $("setting-sound");
+  if (settingsSound) {
+    settingsSound.textContent = enabled ? "On" : "Off";
+    settingsSound.setAttribute("aria-pressed", String(enabled));
+  }
   if (persist) localStorage.setItem("pocket-market-sound", enabled ? "on" : "off");
 }
 function toggleSound() {
@@ -297,6 +304,46 @@ applySound(sound.enabled, false);
   const button = $(id);
   if (button) button.addEventListener("click", toggleSound);
 });
+
+// Reduced motion is a preference, not a permanent lock: the OS setting wins
+// when present, otherwise the Settings toggle decides.
+function applyReducedMotion(enabled, persist = true) {
+  document.body.dataset.motion = enabled ? "reduced" : "full";
+  const button = $("setting-motion");
+  if (button) {
+    button.textContent = enabled ? "On" : "Off";
+    button.setAttribute("aria-pressed", String(enabled));
+  }
+  if (persist) localStorage.setItem("pocket-market-reduced-motion", enabled ? "on" : "off");
+}
+applyReducedMotion(motionReduced(), false);
+
+function renderSettingsScreen() {
+  const soundButton = $("setting-sound");
+  if (!soundButton) return false;
+  soundButton.textContent = sound.enabled ? "On" : "Off";
+  soundButton.setAttribute("aria-pressed", String(sound.enabled));
+
+  const crtOn = document.body.dataset.crt !== "off";
+  const crtButton = $("setting-crt");
+  crtButton.textContent = crtOn ? "On" : "Off";
+  crtButton.setAttribute("aria-pressed", String(crtOn));
+
+  const systemReduced = reducedMotion.matches;
+  const motionButton = $("setting-motion");
+  motionButton.disabled = systemReduced;
+  motionButton.title = systemReduced ? "Controlled by your system preference" : "";
+  motionButton.textContent = motionReduced() ? "On" : "Off";
+  motionButton.setAttribute("aria-pressed", String(motionReduced()));
+
+  document.querySelectorAll("#setting-chart button").forEach(button => {
+    const current = button.dataset.range === chartRange;
+    button.classList.toggle("is-current", current);
+    button.setAttribute("aria-pressed", String(current));
+  });
+  return true;
+}
+
 document.addEventListener("pointerdown", unlockAudio, { once: true });
 document.addEventListener("keydown", unlockAudio, { once: true });
 
@@ -1589,6 +1636,8 @@ function renderMenu() {
   const resultsButton = $("menu-results");
   const classicButton = $("menu-classic");
   const collectionButton = $("menu-collection");
+  const achievementsButton = $("menu-achievements");
+  const settingsButton = $("menu-settings");
   const shopButton = $("menu-shop");
   const statsButton = $("menu-stats");
   const primary = $("menu-primary");
@@ -1598,6 +1647,8 @@ function renderMenu() {
   classicButton.hidden = false;
   collectionButton.hidden = false;
   collectionButton.disabled = runBusy;
+  achievementsButton.disabled = runBusy;
+  settingsButton.disabled = runBusy;
   shopButton.hidden = !runState;
   shopButton.disabled = runBusy;
   statsButton.hidden = false;
@@ -2126,11 +2177,129 @@ function recordCareerStats(run) {
   stats.totalRuns = Number(stats.totalRuns || 0) + 1;
   stats.bestScore = Math.max(Number(stats.bestScore || 0), Number(run.scoreTotal || 0));
   stats.antesCleared = Math.max(Number(stats.antesCleared || 0), Number(run.completedAntes || 0));
-  stats.roundsSurvived = Number(stats.roundsSurvived || 0) + (run.roundHistory ? run.roundHistory.length : 0);
+  const history = run.roundHistory || [];
+  stats.roundsSurvived = Number(stats.roundsSurvived || 0) + history.length;
+  stats.bossesCleared = Number(stats.bossesCleared || 0)
+    + history.filter(result => result.pass && result.round === runRules.roundsPerAnte).length;
   const discovered = new Set(stats.discoveredJokers || []);
   for (const id of run.jokers || []) discovered.add(id);
   stats.discoveredJokers = [...discovered];
   localStorage.setItem("pocket-market-career-stats", JSON.stringify(stats));
+}
+
+// A Joker is discovered the moment the server confirms the purchase, so the
+// Collector achievements do not wait for the run to finish.
+function discoverJoker(id) {
+  if (!id) return;
+  const stats = JSON.parse(localStorage.getItem("pocket-market-career-stats") || "{}");
+  const discovered = new Set(stats.discoveredJokers || []);
+  if (discovered.has(id)) return;
+  discovered.add(id);
+  stats.discoveredJokers = [...discovered];
+  localStorage.setItem("pocket-market-career-stats", JSON.stringify(stats));
+}
+
+const ACHIEVEMENTS = [
+  { id: "opening-bell", name: "Opening Bell", desc: "Finish your first run", test: s => s.runs >= 1 },
+  { id: "on-the-board", name: "On the Board", desc: "Survive your first round", test: s => s.rounds >= 1 },
+  { id: "boss-beater", name: "Boss Beater", desc: "Clear a boss round", test: s => s.bosses >= 1 },
+  { id: "momentum", name: "Momentum", desc: "Clear 3 antes", test: s => s.antes >= 3 },
+  { id: "full-circuit", name: "Full Circuit", desc: "Clear every ante", test: s => s.antes >= runRules.antes },
+  { id: "four-figures", name: "Four Figures", desc: "Reach a run score of 1,000", test: s => s.best >= 1000 },
+  { id: "market-maker", name: "Market Maker", desc: "Reach a run score of 5,000", test: s => s.best >= 5000 },
+  { id: "collector", name: "Collector", desc: "Discover 5 Jokers", test: s => s.jokers >= 5 },
+  { id: "complete-set", name: "Complete Set", desc: "Discover every Joker", test: s => s.catalog > 0 && s.jokers >= s.catalog },
+];
+
+function achievementSnapshot() {
+  const stats = JSON.parse(localStorage.getItem("pocket-market-career-stats") || "{}");
+  return {
+    runs: Number(stats.totalRuns || 0),
+    rounds: Number(stats.roundsSurvived || 0),
+    bosses: Number(stats.bossesCleared || 0),
+    antes: Number(stats.antesCleared || 0),
+    best: Number(stats.bestScore || 0),
+    jokers: new Set(stats.discoveredJokers || []).size,
+    catalog: jokerCatalog?.jokers?.length || 0,
+  };
+}
+
+let achievementToastTimer = 0;
+function showAchievementToast(achievement) {
+  const toast = $("achievement-toast");
+  if (!toast) return;
+  clearTimeout(achievementToastTimer);
+  toast.replaceChildren();
+  const heading = document.createElement("strong");
+  heading.textContent = "Achievement unlocked";
+  const detail = document.createElement("span");
+  detail.textContent = achievement.name;
+  toast.append(heading, detail);
+  toast.hidden = false;
+  achievementToastTimer = setTimeout(() => { toast.hidden = true; }, 3600);
+}
+
+function evaluateAchievements({ announce = false } = {}) {
+  const snapshot = achievementSnapshot();
+  let unlocked;
+  try {
+    unlocked = JSON.parse(localStorage.getItem("pocket-market-achievements") || "{}") || {};
+  } catch {
+    unlocked = {};
+  }
+  const fresh = [];
+  ACHIEVEMENTS.forEach((achievement, index) => {
+    if (unlocked[achievement.id] || !achievement.test(snapshot)) return;
+    unlocked[achievement.id] = new Date().toISOString();
+    fresh.push({ ...achievement, index });
+  });
+  if (fresh.length) {
+    localStorage.setItem("pocket-market-achievements", JSON.stringify(unlocked));
+    if (announce) showAchievementToast(fresh[0]);
+  }
+  return { unlocked, fresh, snapshot };
+}
+
+function renderAchievementsScreen() {
+  const grid = $("achievements-grid");
+  const count = $("achievements-count");
+  if (!grid) return false;
+  const { unlocked } = evaluateAchievements();
+  const owned = ACHIEVEMENTS.filter(achievement => unlocked[achievement.id]).length;
+  count.textContent = `${owned} / ${ACHIEVEMENTS.length} unlocked`;
+  grid.replaceChildren();
+  ACHIEVEMENTS.forEach((achievement, index) => {
+    const isUnlocked = Boolean(unlocked[achievement.id]);
+    const card = document.createElement("article");
+    card.className = `achievement-card card ${isUnlocked ? "is-unlocked" : "is-locked"}`;
+    const mark = document.createElement("span");
+    mark.className = "achievement-mark";
+    mark.textContent = String(index + 1).padStart(2, "0");
+    const copy = document.createElement("div");
+    const name = document.createElement("h3");
+    name.className = "achievement-name";
+    name.textContent = achievement.name;
+    const desc = document.createElement("p");
+    desc.className = "achievement-desc";
+    desc.textContent = achievement.desc;
+    const state = document.createElement("span");
+    state.className = "achievement-state";
+    state.textContent = isUnlocked ? "Unlocked" : "Locked";
+    copy.append(name, desc, state);
+    card.append(mark, copy);
+    grid.append(card);
+  });
+  return true;
+}
+
+let statsRecordedFor = null;
+function noteRunEnded(run) {
+  if (!run) return;
+  const key = String(run.runId || `${run.ante}:${run.round}:${run.scoreTotal}`);
+  if (statsRecordedFor === key) return;
+  statsRecordedFor = key;
+  recordCareerStats(run);
+  evaluateAchievements({ announce: true });
 }
 
 function targetForRoundClient(ante, round) {
@@ -2312,7 +2481,7 @@ function renderCollectionScreen() {
 let shopToastTimer = 0;
 
 function shopWait(ms) {
-  return reducedMotion.matches ? Promise.resolve() : new Promise(resolve => setTimeout(resolve, ms));
+  return motionReduced() ? Promise.resolve() : new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function showShopToast(text, kind = "buy") {
@@ -2531,6 +2700,10 @@ async function navigate(name, { hash = true } = {}) {
       renderFailureScreen();
     } else if (name === "run-stats") {
       renderStatsScreen();
+    } else if (name === "achievements") {
+      renderAchievementsScreen();
+    } else if (name === "settings") {
+      renderSettingsScreen();
     }
   } catch (error) {
     console.error("Render error for " + name + ":", error);
@@ -2569,6 +2742,7 @@ async function startRun() {
   try {
     const data = await runRequest("/api/run/start");
     runState = data.run;
+    statsRecordedFor = null;
     lastRoundResult = null;
     scoreRenderKey = "";
     applyRunAccount();
@@ -2620,6 +2794,7 @@ async function advanceRunRound() {
     scoreRenderKey = "";
     applyRunAccount();
     if (runState.phase === "results") {
+      noteRunEnded(runState);
       await navigate("results");
     } else {
       await navigate("shop");
@@ -2644,6 +2819,7 @@ async function retireCurrentRun() {
     runState = data.run;
     lastRoundResult = null;
     scoreRenderKey = "";
+    noteRunEnded(runState);
     await navigate("results");
   } catch (error) {
     setMessage(error instanceof Error ? error.message : "Retire failed.");
@@ -2683,6 +2859,8 @@ async function purchaseJoker(jokerId, card = null) {
     }
     card?.classList.remove("is-purchasing");
     card?.classList.add("is-sold");
+    discoverJoker(jokerId);
+    evaluateAchievements({ announce: true });
     await shopWait(380);
     renderShopScreen();
     renderMenu();
@@ -2771,8 +2949,21 @@ $("menu-primary").addEventListener("click", () => {
 $("menu-results").addEventListener("click", () => navigate("results"));
 $("menu-classic").addEventListener("click", () => navigate("floor"));
 $("menu-collection").addEventListener("click", () => navigate("collection"));
+$("menu-achievements").addEventListener("click", () => navigate("achievements"));
+$("menu-settings").addEventListener("click", () => navigate("settings"));
 $("menu-shop").addEventListener("click", () => navigate("shop"));
 $("menu-stats").addEventListener("click", () => navigate("run-stats"));
+$("achievements-back").addEventListener("click", () => navigate("menu"));
+$("settings-back").addEventListener("click", () => navigate("menu"));
+$("setting-sound").addEventListener("click", toggleSound);
+$("setting-crt").addEventListener("click", () => applyCrt(document.body.dataset.crt === "off"));
+$("setting-motion").addEventListener("click", () => applyReducedMotion(!motionReduced()));
+document.querySelectorAll("#setting-chart button").forEach(button => {
+  button.addEventListener("click", () => {
+    setChartRange(button.dataset.range);
+    renderSettingsScreen();
+  });
+});
 $("menu-signout").addEventListener("click", () => {
   localStorage.removeItem("pocket-market-player-name");
   $("identity-gate").hidden = false;
